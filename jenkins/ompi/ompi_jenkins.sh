@@ -503,7 +503,73 @@ EOF
                     exit 1
                 fi
             fi
+        fi
 
+        # testing -tune option (mca_base_envar_file_prefix mca parameter) which supports setting both mca and env vars
+        echo "check if mca_base_envar_file_prefix parameter (a.k.a -tune cmd line option) is supported in $OMPI_HOME"
+        val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_envar_file_prefix | wc -l)
+        if [ $val -gt 0 ]; then
+            echo "test -tune option in $OMPI_HOME"
+            echo "-x XXX_A=1   --x   XXX_B = 2 -x XXX_C -x XXX_D --x XXX_E" > $WORKSPACE/test_tune.conf
+            # next line with magic sed operation does the following:
+            # 1. cut all patterns XXX_.*= from the begining of each line, only values of env vars remain.
+            # 2. replace \n by + at each line
+            # 3. sum all values of env vars with given pattern.
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            # return (6+2+3+4+5)*2=40
+            if [ $val -ne 40 ]; then
+                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                    exit 1
+                fi
+            fi
+
+            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            # return (1+2+3+4+5)*2=30
+            if [ $val -ne 30 ]; then
+                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                    exit 1
+                fi
+            fi
+
+            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            # return (7+8+3+4+5)*2=54
+            if [ $val -ne 54 ]; then
+                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                    exit 1
+                fi
+            fi
+
+            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+            echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            # return (1+2+3+4+5)*2=30
+            if [ $val -ne 30 ]; then
+                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                    exit 1
+                fi
+            fi
+
+            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+            echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            # return (9+10+3+4+5)*2=62
+            if [ $val -ne 62 ]; then
+                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                    exit 1
+                fi
+            fi
+
+            echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
+            echo "-x XXX_B=9 -x XXX_E" > $WORKSPACE/test_tune2.conf
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            # return (6+9+7+8+5)*2=70
+            if [ $val -ne 70 ]; then
+                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                    exit 1
+                fi
+            fi
         fi
     done
 
