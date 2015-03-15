@@ -6,5 +6,8 @@ Jenkins scripts for various projects
 
 Pre-requisite
 
-yum install npm
-npm install gh -g.
+``` shell
+# yum install npm
+# npm install gh -g.
+# yum install jq
+```
