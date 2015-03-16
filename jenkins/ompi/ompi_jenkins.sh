@@ -167,6 +167,9 @@ function mpi_runner()
             if [ $val -gt 0 ]; then
                 $timeout_exe mpirun -np $np $mca -mca pml yalla ${exe_path} ${exe_args}
             fi
+            if [ -n "$mpi_custom_args" ]; then
+                $timeout_exe mpirun -np $np $mca $mpi_custome_args ${exe_path} ${exe_args}
+            fi
         fi
     done
 }
@@ -201,6 +204,9 @@ function oshmem_runner()
             $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${exe_path} ${exe_args}
             $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${exe_path} ${exe_args}
             $timeout_exe oshrun -np $np $mca $spml_ikrit -mca pml cm  -mca mtl mxm            ${exe_path} ${exe_args}
+            if [ -n "$oshmem_custom_args" ]; then
+                $timeout_exe oshrun -np $np $mca $oshmem_custom_args ${exe_path} ${exe_args}
+            fi
         fi
     done
 }
