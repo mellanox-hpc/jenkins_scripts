@@ -28,6 +28,16 @@ btl_vader=${btl_vader:="yes"}
 # can be TODO, SKIP
 mlnx_cov="TODO"
 
+# indicate to coverity which files to exclude from report
+cov_exclude_file_list="oshmem/mca/memheap/ptmalloc/malloc.c"
+
+# exclude hwloc external package
+if [ -d "opal/mca/hwloc/hwloc" ]; then
+    for excl in $(find opal/mca/hwloc/hwloc* -type f -name "*.[ch]"); do
+        cov_exclude_file_list="$cov_exclude_file_list $excl"
+    done
+fi
+
 # prepare to run from command line w/o jenkins
 if [ -z "$WORKSPACE" ]; then
     WORKSPACE=$PWD
@@ -257,6 +267,11 @@ function test_cov
     module load tools/cov
     rm -rf $cov_build_dir
     cov-build   --dir $cov_build_dir $cov_make_cmd
+
+    for excl in $cov_exclude_file_list; do
+        cov-manage-emit --dir $cov_build_dir --tu-pattern "file('$excl')" delete
+    done
+
     cov-analyze --dir $cov_build_dir
     nerrors=$(cov-format-errors --dir $cov_build_dir | awk '/Processing [0-9]+ errors?/ { print $2 }')
 
@@ -307,7 +322,9 @@ if [ "$jenkins_test_build" = "yes" ]; then
     rm -rf $ompi_home_list 
 
     # build ompi
-    $autogen_script && echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE && make $make_opt install || exit 10
+    $autogen_script 
+    echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE 
+    make $make_opt install 
 
     jenkins_build_passed=1
 fi
@@ -362,7 +379,9 @@ fi
 if [ "$jenkins_test_src_rpm" = "yes" ]; then
 
     # check distclean
-    make $make_opt distclean && $autogen_script && echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE || exit 11
+    make $make_opt distclean 
+    $autogen_script 
+    echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE || exit 11
 
     if [ -x /usr/bin/dpkg-buildpackage ]; then
         echo "Building OMPI on debian"
