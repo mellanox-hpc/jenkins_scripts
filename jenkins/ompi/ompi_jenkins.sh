@@ -571,6 +571,26 @@ EOF
                 fi
             fi
         fi
+
+        echo "Check if the dist mapping policy is supported in $OMPI_HOME"
+        val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps base | grep dist | wc -l)
+        if [ $val -gt 0 ]; then
+            echo "test the dist mapping policy in $OMPI_HOME"
+            $OMPI_HOME/bin/mpicc -o ./mindist_test ./mindist_test.c
+            for hca_dev in $(ibstat -l); do
+                val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} mindist_test 2>&1 | grep Success | wc -l)
+                if [ $val -ne 8 ]; then
+                    val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} mindist_test 2>&1 | grep Error | wc -l)
+                    if [ $val -gt 0 ]; then
+                        if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
+                            exit 1
+                        fi
+                    else
+                        echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
+                    fi
+                fi
+            done
+        fi
     done
 
 fi
