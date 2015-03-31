@@ -605,9 +605,9 @@ EOF
             abs_path=$(readlink -f $rel_path)
             $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
             for hca_dev in $(ibstat -l); do
-                val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Success | wc -l)
+                val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Success | wc -l)
                 if [ $val -ne 8 ]; then
-                    val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Error | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Error | wc -l)
                     if [ $val -gt 0 ]; then
                         if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
                             exit 1

@@ -64,7 +64,7 @@ int get_numa_cores_number(void)
 
 int main(int argc, char* argv[])
 {
-    char *dist_hca = NULL, *policy = NULL, *policy_copy = NULL, *pch;
+    char *dist_hca = NULL, *policy = NULL, *pch;
     cpu_set_t cpuset;
 
     int i, rc, my_rank,
@@ -95,22 +95,12 @@ int main(int argc, char* argv[])
     }
 
     policy = getenv("OMPI_MCA_rmaps_base_mapping_policy");
-    if (NULL != policy) {
-        policy_copy = strdup(policy);
-        dist_hca = strstr(policy_copy, "dist:");
-        dist_hca += strlen("dist:");
-        if (NULL != (pch = strchr(dist_hca, ','))) {
-            *pch = '\0';
-        }
-    }
+    dist_hca = getenv("OMPI_MCA_rmaps_dist_device");
 
-    if (NULL == dist_hca) {
+    if (NULL == policy || NULL == dist_hca) {
 		fprintf(stderr, "\nrank - %d: the \"dist\" mapping policy was not specified.\n", my_rank);
 		fflush(stderr);
         MPI_Finalize();
-        if (NULL != policy_copy) {
-            free(policy_copy);
-        }
 		return 0;
 	}
     
@@ -119,13 +109,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\nrank - %d: info about locality to %s isn't provided by the BIOS.\n", my_rank, dist_hca);
         fflush(stderr);
         MPI_Finalize();
-        if (NULL != policy_copy) {
-            free(policy_copy);
-        }
 		return 0;
-    }
-    if (NULL != policy_copy) {
-        free(policy_copy);
     }
     
     CPU_ZERO(&cpuset);
