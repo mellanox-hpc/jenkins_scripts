@@ -20,14 +20,14 @@ int command_calc(const char *string)
 	FILE *command = popen(string, "r");
 
 	if (NULL == command) {
-		return -1;
+		return 1;
 	}
 
 	result = fgets(buffer, sizeof(buffer), command);
 	pclose(command);
 
 	if (NULL == result) {
-		return -1;
+		return 1;
 	}
 
     return atoi(result);
@@ -73,14 +73,14 @@ int main(int argc, char* argv[])
 
     numcpus = get_cores_number();
 	if (numcpus < 0) {
-		fprintf(stderr, "\nBad CPUs number.\n");
+		fprintf(stderr, "\nrank = %d: Bad CPUs number. Skip.\n", my_rank);
 		fflush(stderr);
-		return 0;
+		return 1;
 	}
     
     rc = MPI_Init(&argc, &argv);
     if (MPI_SUCCESS != rc) {
-        printf ("\nError starting MPI program. Terminating.\n");
+        printf ("\nrank - %d: Error starting MPI program. Skip.\n", my_rank);
         MPI_Abort(MPI_COMM_WORLD, rc);
     }
 
@@ -88,43 +88,43 @@ int main(int argc, char* argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     
     if (size > get_numa_cores_number()) {
-		fprintf(stderr, "\nrank - %d: number of processes exceeds number of cores at a single numa node. Test won't get correct results in this case.\n", my_rank);
+		fprintf(stderr, "\nrank - %d: number of processes exceeds number of cores at a single numa node. Test won't get correct results in this case. Skip.\n", my_rank);
 		fflush(stderr);
         MPI_Finalize();
-        return 0;
+        return 1;
     }
 
     policy = getenv("OMPI_MCA_rmaps_base_mapping_policy");
     dist_hca = getenv("OMPI_MCA_rmaps_dist_device");
 
     if (NULL == policy || NULL == dist_hca) {
-		fprintf(stderr, "\nrank - %d: the \"dist\" mapping policy was not specified.\n", my_rank);
+		fprintf(stderr, "\nrank - %d: the \"dist\" mapping policy was not specified. Skip.\n", my_rank);
 		fflush(stderr);
         MPI_Finalize();
-		return 0;
+		return 1;
 	}
     
     numa_node = get_closed_numa(dist_hca);
     if (-1 == numa_node) {
-        fprintf(stderr, "\nrank - %d: info about locality to %s isn't provided by the BIOS.\n", my_rank, dist_hca);
+        fprintf(stderr, "\nrank - %d: info about locality to %s isn't provided by the BIOS. Skip.\n", my_rank, dist_hca);
         fflush(stderr);
         MPI_Finalize();
-		return 0;
+		return 1;
     }
     
     CPU_ZERO(&cpuset);
     if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0) {
-		fprintf(stderr, "\nrank - %d: sched_getaffinity failed, errno says %s\n", my_rank, strerror(errno));
+		fprintf(stderr, "\nrank - %d: sched_getaffinity failed, errno says %s. Skip.\n", my_rank, strerror(errno));
 		fflush(stderr);
         MPI_Finalize();
-		return -1;
+		return 1;
 	}
 
     for (i = 0; i < numcpus; ++i) {
 	    if (CPU_ISSET(i, &cpuset)) {
             next = numa_node_of_cpu(i);
             if (-1 != numa && next != numa) {
-                fprintf(stderr, "\nError rank - %d: scheduled on more than one numa node\n", my_rank);
+                fprintf(stderr, "\nError rank - %d: scheduled on more than one numa node.\n", my_rank);
                 fflush(stderr);
                 MPI_Finalize();
                 return 1;
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 		return 1;
     }
 
-    fprintf(stderr, "\nSuccess rank - %d: only one NUMA is scheduled\n", my_rank);
+    fprintf(stderr, "\nSuccess rank - %d: only one NUMA is scheduled.\n", my_rank);
     fflush(stderr);
 
     MPI_Finalize();
