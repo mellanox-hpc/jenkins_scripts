@@ -96,6 +96,9 @@ int main(int argc, char* argv[])
 
     policy = getenv("OMPI_MCA_rmaps_base_mapping_policy");
     dist_hca = getenv("OMPI_MCA_rmaps_dist_device");
+    if (NULL != (pch = strchr(dist_hca, ':'))) {
+        *pch = '\0';
+    }
 
     if (NULL == policy || NULL == dist_hca) {
 		fprintf(stderr, "\nrank - %d: the \"dist\" mapping policy was not specified. Skip.\n", my_rank);
