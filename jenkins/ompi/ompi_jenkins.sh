@@ -140,7 +140,7 @@ echo Running following tests:
 set|grep jenkins_test_
 
 if [ "$jenkins_test_threads" = "yes" ]; then
-    extra_conf="--enable-mpi-thread-multiple --enable-opal-multi-threads"
+    extra_conf="--enable-mpi-thread-multiple --enable-opal-multi-threads $extra_conf"
 fi
 
 
