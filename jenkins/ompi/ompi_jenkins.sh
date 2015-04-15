@@ -524,9 +524,7 @@ EOF
             echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
             val=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $WORKSPACE/env_mpi |grep ^XXX_|wc -l)
             if [ $val -ne 10 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
         fi
 
@@ -543,27 +541,21 @@ EOF
             val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (6+2+3+4+5)*2=40
             if [ $val -ne 40 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
             val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (1+2+3+4+5)*2=30
             if [ $val -ne 30 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
             val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (7+8+3+4+5)*2=54
             if [ $val -ne 54 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
@@ -571,9 +563,7 @@ EOF
             val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (1+2+3+4+5)*2=30
             if [ $val -ne 30 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
@@ -581,9 +571,7 @@ EOF
             val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (9+10+3+4+5)*2=62
             if [ $val -ne 62 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
 
             echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
@@ -591,9 +579,7 @@ EOF
             val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (6+9+7+8+5)*2=70
             if [ $val -ne 70 ]; then
-                if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                    exit 1
-                fi
+                exit 1
             fi
         fi
 
@@ -614,9 +600,7 @@ set -e
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
-                        if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
-                            exit 1
-                        fi
+                        exit 1
                     fi
                 fi
             done
