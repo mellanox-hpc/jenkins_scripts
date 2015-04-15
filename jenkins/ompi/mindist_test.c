@@ -96,8 +96,17 @@ int main(int argc, char* argv[])
 
     policy = getenv("OMPI_MCA_rmaps_base_mapping_policy");
     dist_hca = getenv("OMPI_MCA_rmaps_dist_device");
-    if (NULL != (pch = strchr(dist_hca, ':'))) {
-        *pch = '\0';
+    if (NULL != dist_hca) {
+        if (NULL != (pch = strchr(dist_hca, ':'))) {
+            *pch = '\0';
+        }
+    } else if (NULL != policy) {
+        dist_hca = strstr(policy, "dist:");
+        dist_hca += strlen("dist:");
+        dist_hca = strdup(dist_hca);
+        if (NULL != (pch = strchr(dist_hca, ','))) {
+            *pch = '\0';
+        }
     }
 
     if (NULL == policy || NULL == dist_hca) {
@@ -112,8 +121,10 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\nrank - %d: info about locality to %s isn't provided by the BIOS. Skip.\n", my_rank, dist_hca);
         fflush(stderr);
         MPI_Finalize();
+        free(dist_hca);
 		return 1;
     }
+    free(dist_hca);
     
     CPU_ZERO(&cpuset);
     if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0) {
