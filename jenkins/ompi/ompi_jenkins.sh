@@ -56,6 +56,8 @@ tarball_dir=${WORKSPACE}/tarball
 check_help_exe="$WORKSPACE/contrib/check-help-strings.pl"
 
 make_opt="-j$(nproc)"
+rel_path=$(dirname $0)
+abs_path=$(readlink -f $rel_path)
 
 # extract jenkins commands from function args
 function check_commands
@@ -490,6 +492,11 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
         fi
     done
 
+    for mpit in $abs_path/*.c; do
+        out_name=$(basename $mpiti .c)
+        $OMPI_HOME/bin/mpicc -o  $abs_path/$out_name  $mpit
+    done
+
     # todo: make dir structure with shell scripts to run as jenkins tests at the end
     for OMPI_HOME in $(echo $ompi_home_list); do
         echo "check if mca_base_env_list parameter is supported in $OMPI_HOME"
@@ -503,26 +510,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             fi
 
             # check amca param
-cat>$WORKSPACE/env_mpi.c<<EOF
-#include <stdio.h>
-#include <stdlib.h>
-#include <mpi.h>
-int main(int argc, char **argv, char **env)
-{
-    int i=0;
-    char *astr;
-    MPI_Init(&argc,&argv);
-    astr=env[i];
-    while(astr) {
-        printf("%s\n",astr);
-        astr=env[++i];
-    }
-   MPI_Finalize();
-}
-EOF
-            $OMPI_HOME/bin/mpicc -o $WORKSPACE/env_mpi $WORKSPACE/env_mpi.c
             echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $WORKSPACE/env_mpi |grep ^XXX_|wc -l)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
             if [ $val -ne 10 ]; then
                 exit 1
             fi
@@ -538,21 +527,21 @@ EOF
             # 1. cut all patterns XXX_.*= from the begining of each line, only values of env vars remain.
             # 2. replace \n by + at each line
             # 3. sum all values of env vars with given pattern.
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (6+2+3+4+5)*2=40
             if [ $val -ne 40 ]; then
                 exit 1
             fi
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (1+2+3+4+5)*2=30
             if [ $val -ne 30 ]; then
                 exit 1
             fi
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (7+8+3+4+5)*2=54
             if [ $val -ne 54 ]; then
                 exit 1
@@ -560,7 +549,7 @@ EOF
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
             echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (1+2+3+4+5)*2=30
             if [ $val -ne 30 ]; then
                 exit 1
@@ -568,7 +557,7 @@ EOF
 
             echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
             echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (9+10+3+4+5)*2=62
             if [ $val -ne 62 ]; then
                 exit 1
@@ -576,7 +565,7 @@ EOF
 
             echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
             echo "-x XXX_B=9 -x XXX_E" > $WORKSPACE/test_tune2.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $WORKSPACE/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
             # return (6+9+7+8+5)*2=70
             if [ $val -ne 70 ]; then
                 exit 1
@@ -587,18 +576,17 @@ EOF
         val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps base | grep dist | wc -l)
         if [ $val -gt 0 ]; then
             echo "test the dist mapping policy in $OMPI_HOME"
-            rel_path=$(dirname $0)
-            abs_path=$(readlink -f $rel_path)
             $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
+            mca_mapper="-mca mpi_warn_on_fork 0"
             val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
             if [ $val -gt 0 ]; then
                 for hca_dev in $(ibstat -l); do
-set +e
-                    $OMPI_HOME/bin/mpirun -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test
+                    set +e
+                    $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test
                     val=$?
-set -e
+                    set -e
                     if [ $val -ne 0 ]; then
-                        val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                        val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                         if [ $val -gt 0 ]; then
                             echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                         else
@@ -608,12 +596,12 @@ set -e
                 done
             else
                 for hca_dev in $(ibstat -l); do
-set +e
-                    $OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} $abs_path/mindist_test
+                    set +e
+                    $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test
                     val=$?
-set -e
+                    set -e
                     if [ $val -ne 0 ]; then
-                        val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                        val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                         if [ $val -gt 0 ]; then
                             echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                         else
@@ -624,5 +612,4 @@ set -e
             fi
         fi
     done
-
 fi
