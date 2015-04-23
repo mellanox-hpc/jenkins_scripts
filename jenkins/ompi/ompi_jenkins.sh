@@ -574,6 +574,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
         echo "Check if the dist mapping policy is supported in $OMPI_HOME"
         val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps base | grep dist | wc -l)
+set +e
         if [ $val -gt 0 ]; then
             echo "test the dist mapping policy in $OMPI_HOME"
             $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
@@ -581,10 +582,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
             if [ $val -gt 0 ]; then
                 for hca_dev in $(ibstat -l); do
-                    set +e
                     $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test
                     val=$?
-                    set -e
                     if [ $val -ne 0 ]; then
                         val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                         if [ $val -gt 0 ]; then
@@ -596,10 +595,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 done
             else
                 for hca_dev in $(ibstat -l); do
-                    set +e
                     $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test
                     val=$?
-                    set -e
                     if [ $val -ne 0 ]; then
                         val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                         if [ $val -gt 0 ]; then
@@ -611,5 +608,6 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 done
             fi
         fi
+set -e
     done
 fi
