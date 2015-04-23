@@ -493,7 +493,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
     done
 
     for mpit in $abs_path/*.c; do
-        out_name=$(basename $mpiti .c)
+        out_name=$(basename $mpit .c)
         $OMPI_HOME/bin/mpicc -o  $abs_path/$out_name  $mpit
     done
 
