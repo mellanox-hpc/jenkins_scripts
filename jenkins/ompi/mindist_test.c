@@ -70,6 +70,7 @@ int main(int argc, char* argv[])
     int i, rc, my_rank,
 	    numcpus, size;
     int numa = -1, next, numa_node;
+    int num_numa_cores;
 
     numcpus = get_cores_number();
 	if (numcpus < 0) {
@@ -87,8 +88,9 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     
-    if (size > get_numa_cores_number()) {
-		fprintf(stderr, "\nrank - %d: number of processes exceeds number of cores at a single numa node. Test won't get correct results in this case. Skip.\n", my_rank);
+    num_numa_cores = get_numa_cores_number();
+    if (size > num_numa_cores) {
+		fprintf(stderr, "\nrank - %d: number of processes exceeds number of cores at a single numa node. Test won't get correct results in this case: num_procs = %d, num_cores = %d. Skip.\n", my_rank, size, num_numa_cores);
 		fflush(stderr);
         MPI_Finalize();
         return 1;
