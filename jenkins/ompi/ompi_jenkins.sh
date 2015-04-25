@@ -130,6 +130,8 @@ fi
 
 if [ -n "$NOJENKINS" -a -d $OMPI_HOME1 ]; then
     jenkins_test_build=no
+    jenkins_test_cov=no
+    jenkins_test_check=no
     jenkins_test_src_rpm=no
     jenkins_build_passed=1
 fi
@@ -300,20 +302,138 @@ function test_cov
     return $nerrors
 }
 
+function test_tune()
+{
+    echo "check if mca_base_env_list parameter is supported in $OMPI_HOME"
+    val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_env_list | wc -l)
+    if [ $val -gt 0 ]; then
+        echo "test mca_base_env_list option in $OMPI_HOME"
+        export XXX_C=3 XXX_D=4 XXX_E=5
+        val=$($OMPI_HOME/bin/mpirun -np 2 -mca mca_base_env_list 'XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E' env|grep ^XXX_|wc -l)
+        if [ $val -ne 10 ]; then
+            exit 1
+        fi
+
+        # check amca param
+        echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
+        val=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
+        if [ $val -ne 10 ]; then
+            exit 1
+        fi
+    fi
+
+    # testing -tune option (mca_base_envar_file_prefix mca parameter) which supports setting both mca and env vars
+    echo "check if mca_base_envar_file_prefix parameter (a.k.a -tune cmd line option) is supported in $OMPI_HOME"
+    val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_envar_file_prefix | wc -l)
+    if [ $val -gt 0 ]; then
+        echo "test -tune option in $OMPI_HOME"
+        echo "-x XXX_A=1   --x   XXX_B = 2 -x XXX_C -x XXX_D --x XXX_E" > $WORKSPACE/test_tune.conf
+        # next line with magic sed operation does the following:
+        # 1. cut all patterns XXX_.*= from the begining of each line, only values of env vars remain.
+        # 2. replace \n by + at each line
+        # 3. sum all values of env vars with given pattern.
+        val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # return (6+2+3+4+5)*2=40
+        if [ $val -ne 40 ]; then
+            exit 1
+        fi
+
+        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # return (1+2+3+4+5)*2=30
+        if [ $val -ne 30 ]; then
+            exit 1
+        fi
+
+        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # return (7+8+3+4+5)*2=54
+        if [ $val -ne 54 ]; then
+            exit 1
+        fi
+
+        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
+        val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # return (1+2+3+4+5)*2=30
+        if [ $val -ne 30 ]; then
+            exit 1
+        fi
+
+        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
+        val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # return (9+10+3+4+5)*2=62
+        if [ $val -ne 62 ]; then
+            exit 1
+        fi
+
+        echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
+        echo "-x XXX_B=9 -x XXX_E" > $WORKSPACE/test_tune2.conf
+        val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # return (6+9+7+8+5)*2=70
+        if [ $val -ne 70 ]; then
+            exit 1
+        fi
+    fi
+}
+
+function test_mindist()
+{
+    echo "Check if the dist mapping policy is supported in $OMPI_HOME"
+    val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps base | grep dist | wc -l)
+    set +e
+    if [ $val -gt 0 ]; then
+        echo "test the dist mapping policy in $OMPI_HOME"
+        $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
+        mca_mapper="-mca mpi_warn_on_fork 0 -mca btl_openib_warn_default_gid_prefix 0"
+        val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
+        if [ $val -gt 0 ]; then
+            for hca_dev in $(ibstat -l); do
+                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test
+                val=$?
+                if [ $val -ne 0 ]; then
+                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    if [ $val -gt 0 ]; then
+                        echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
+                    else
+                        exit 1
+                    fi
+                fi
+            done
+        else
+            for hca_dev in $(ibstat -l); do
+                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test
+                val=$?
+                if [ $val -ne 0 ]; then
+                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    if [ $val -gt 0 ]; then
+                        echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
+                    else
+                        exit 1
+                    fi
+                fi
+            done
+        fi
+    fi
+    set -e
+}
+
 
 trap "on_exit" INT TERM ILL KILL FPE SEGV ALRM
 
 on_start
 
-if [ -x "autogen.sh" ]; then
-    autogen_script=./autogen.sh
-else
-    autogen_script=./autogen.pl
-fi
 
 
 if [ "$jenkins_test_build" = "yes" ]; then
     echo "Building OMPI"
+
+    if [ -x "autogen.sh" ]; then
+        autogen_script=./autogen.sh
+    else
+        autogen_script=./autogen.pl
+    fi
 
     # control mellanox platform file, select various configure flags
     export mellanox_autodetect=yes
@@ -499,115 +619,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
     # todo: make dir structure with shell scripts to run as jenkins tests at the end
     for OMPI_HOME in $(echo $ompi_home_list); do
-        echo "check if mca_base_env_list parameter is supported in $OMPI_HOME"
-        val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_env_list | wc -l)
-        if [ $val -gt 0 ]; then
-            echo "test mca_base_env_list option in $OMPI_HOME"
-            export XXX_C=3 XXX_D=4 XXX_E=5
-            val=$($OMPI_HOME/bin/mpirun -np 2 -mca mca_base_env_list 'XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E' env|grep ^XXX_|wc -l)
-            if [ $val -ne 10 ]; then
-                exit 1
-            fi
-
-            # check amca param
-            echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
-            if [ $val -ne 10 ]; then
-                exit 1
-            fi
-        fi
-
-        # testing -tune option (mca_base_envar_file_prefix mca parameter) which supports setting both mca and env vars
-        echo "check if mca_base_envar_file_prefix parameter (a.k.a -tune cmd line option) is supported in $OMPI_HOME"
-        val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_envar_file_prefix | wc -l)
-        if [ $val -gt 0 ]; then
-            echo "test -tune option in $OMPI_HOME"
-            echo "-x XXX_A=1   --x   XXX_B = 2 -x XXX_C -x XXX_D --x XXX_E" > $WORKSPACE/test_tune.conf
-            # next line with magic sed operation does the following:
-            # 1. cut all patterns XXX_.*= from the begining of each line, only values of env vars remain.
-            # 2. replace \n by + at each line
-            # 3. sum all values of env vars with given pattern.
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-            # return (6+2+3+4+5)*2=40
-            if [ $val -ne 40 ]; then
-                exit 1
-            fi
-
-            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-            # return (1+2+3+4+5)*2=30
-            if [ $val -ne 30 ]; then
-                exit 1
-            fi
-
-            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-            # return (7+8+3+4+5)*2=54
-            if [ $val -ne 54 ]; then
-                exit 1
-            fi
-
-            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-            echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-            # return (1+2+3+4+5)*2=30
-            if [ $val -ne 30 ]; then
-                exit 1
-            fi
-
-            echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-            echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-            # return (9+10+3+4+5)*2=62
-            if [ $val -ne 62 ]; then
-                exit 1
-            fi
-
-            echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
-            echo "-x XXX_B=9 -x XXX_E" > $WORKSPACE/test_tune2.conf
-            val=$($OMPI_HOME/bin/mpirun -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-            # return (6+9+7+8+5)*2=70
-            if [ $val -ne 70 ]; then
-                exit 1
-            fi
-        fi
-
-        echo "Check if the dist mapping policy is supported in $OMPI_HOME"
-        val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps base | grep dist | wc -l)
-set +e
-        if [ $val -gt 0 ]; then
-            echo "test the dist mapping policy in $OMPI_HOME"
-            $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
-            mca_mapper="-mca mpi_warn_on_fork 0"
-            val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
-            if [ $val -gt 0 ]; then
-                for hca_dev in $(ibstat -l); do
-                    $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test
-                    val=$?
-                    if [ $val -ne 0 ]; then
-                        val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
-                        if [ $val -gt 0 ]; then
-                            echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
-                        else
-                            exit 1
-                        fi
-                    fi
-                done
-            else
-                for hca_dev in $(ibstat -l); do
-                    $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test
-                    val=$?
-                    if [ $val -ne 0 ]; then
-                        val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
-                        if [ $val -gt 0 ]; then
-                            echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
-                        else
-                            exit 1
-                        fi
-                    fi
-                done
-            fi
-        fi
-set -e
+        test_tune
+        #test_mindist
     done
 fi
+
