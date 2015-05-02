@@ -455,7 +455,6 @@ if [ "$jenkins_test_build" = "yes" ]; then
     fi
 fi
 
-exit 0
 if [ -n "$jenkins_build_passed" ]; then
     # check coverity
     if [ "$jenkins_test_cov" = "yes" ]; then
