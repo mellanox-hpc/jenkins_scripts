@@ -518,7 +518,7 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
         rm -rf $tarball_dir
         mkdir -p $tarball_dir
 
-        make_dist_args="--highok --distdir $tarball_dir"
+        make_dist_args="--highok --distdir $tarball_dir --greekonly"
 
         for arg in no-git-update dirtyok verok; do
             if grep $arg contrib/dist/make_tarball 2>&1 > /dev/null; then 
