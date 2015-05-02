@@ -527,7 +527,7 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
         done
 
         chmod +x ./contrib/dist/make* ./contrib/dist/linux/buildrpm.sh
-        echo contrib/dist/make_dist_tarball $make_dist_args | bash -xeE || exit 11
+        echo contrib/dist/make_tarball $make_dist_args | bash -xeE || exit 11
 
         # build src.rpm
         # svn_r=$(git rev-parse --short=7 HEAD| tr -d '\n') ./contrib/dist/make_tarball --distdir $tarball_dir
