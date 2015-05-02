@@ -447,10 +447,15 @@ if [ "$jenkins_test_build" = "yes" ]; then
     $autogen_script 
     echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE 
     make $make_opt install 
-
     jenkins_build_passed=1
+
+    # make check
+    if [ "$jenkins_test_check" = "yes" ]; then
+        make $make_opt check || exit 12
+    fi
 fi
 
+exit 0
 if [ -n "$jenkins_build_passed" ]; then
     # check coverity
     if [ "$jenkins_test_cov" = "yes" ]; then
@@ -493,9 +498,6 @@ if [ -n "$jenkins_build_passed" ]; then
         fi
     fi
 
-    if [ "$jenkins_test_check" = "yes" ]; then
-        make $make_opt check || exit 12
-    fi
 fi
 
 if [ "$jenkins_test_src_rpm" = "yes" ]; then
