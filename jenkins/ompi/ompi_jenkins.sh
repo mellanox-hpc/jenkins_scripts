@@ -382,6 +382,10 @@ function test_mindist()
 {
     echo "Check if the dist mapping policy is supported in $OMPI_HOME"
     val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps base | grep dist | wc -l)
+    var=$(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)
+    export TEST_PHYS_ID_COUNT=$var
+    var=$(grep "core id" /proc/cpuinfo | sort | uniq | wc -l)
+    export TEST_CORE_ID_COUNT=$var
     set +e
     if [ $val -gt 0 ]; then
         echo "test the dist mapping policy in $OMPI_HOME"
@@ -390,10 +394,12 @@ function test_mindist()
         val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
         if [ $val -gt 0 ]; then
             for hca_dev in $(ibstat -l); do
-                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test
+                var=$(cat /sys/class/infiniband/${hca_dev}/device/numa_node)
+                export TEST_CLOSEST_NUMA=$var
+                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -403,10 +409,12 @@ function test_mindist()
             done
         else
             for hca_dev in $(ibstat -l); do
-                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test
+                var=$(cat /sys/class/infiniband/${hca_dev}/device/numa_node)
+                export TEST_CLOSEST_NUMA=$var
+                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -621,7 +629,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
     # todo: make dir structure with shell scripts to run as jenkins tests at the end
     for OMPI_HOME in $(echo $ompi_home_list); do
         test_tune
-        #test_mindist
+        test_mindist
     done
 fi
 

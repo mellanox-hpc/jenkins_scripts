@@ -11,53 +11,46 @@
 #include <stdlib.h>
 #include <string.h>
 
-int command_calc(const char *string)
-{
-#define COMMAND_CALC_BFF_SIZE 1024
-
-	char *result, buffer[COMMAND_CALC_BFF_SIZE];
-
-	FILE *command = popen(string, "r");
-
-	if (NULL == command) {
-		return 1;
-	}
-
-	result = fgets(buffer, sizeof(buffer), command);
-	pclose(command);
-
-	if (NULL == result) {
-		return 1;
-	}
-
-    return atoi(result);
-}
-
 int get_cores_number(void)
 {
     int cores_number;
+    char *envstr;
 
-	cores_number = command_calc("cat /proc/cpuinfo | grep \"physical id\" | sort | uniq | wc -l");
-	cores_number *= command_calc("grep \"core id\" /proc/cpuinfo | sort | uniq | wc -l");
+    cores_number = -1;
+    envstr = getenv("TEST_PHYS_ID_COUNT");
+    if (NULL != envstr) {
+        cores_number = (int)strtol(envstr, NULL, 10);
+        envstr = getenv("TEST_CORE_ID_COUNT");
+        if (NULL != envstr) {
+            cores_number *= (int)strtol(envstr, NULL, 10);
+        }
+    }
 
     return cores_number;
 }
 
-int get_closed_numa(char *hca)
+int get_closest_numa(char *hca)
 {
     int cnuma;
-    char *cmd;
-    asprintf(&cmd, "cat /sys/class/infiniband/%s/device/numa_node", hca);
-    cnuma = command_calc(cmd);
-    free(cmd);
+    char *numa;
+    cnuma = -1;
+    numa = getenv("TEST_CLOSEST_NUMA");
+    if (NULL != numa) {
+        cnuma = (int)strtol(numa, NULL, 10);
+    }
     return cnuma;
 }
 
 int get_numa_cores_number(void)
 {
     int cores_number;
+    char *envstr;
 
-	cores_number = command_calc("grep \"core id\" /proc/cpuinfo | sort | uniq | wc -l");
+    cores_number = -1;
+    envstr = getenv("TEST_CORE_ID_COUNT");
+    if (NULL != envstr) {
+        cores_number = (int)strtol(envstr, NULL, 10);
+    }
 
     return cores_number;
 }
@@ -118,7 +111,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
     
-    numa_node = get_closed_numa(dist_hca);
+    numa_node = get_closest_numa(dist_hca);
     if (-1 == numa_node) {
         fprintf(stderr, "\nrank - %d: info about locality to %s isn't provided by the BIOS. Skip.\n", my_rank, dist_hca);
         fflush(stderr);
