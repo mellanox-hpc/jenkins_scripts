@@ -291,7 +291,7 @@ function test_cov
             local cov_proj_disp="$(echo $cov_proj|cut -f1 -d_)"
             echo "" >> $gh_cov_msg
             echo "* Coverity found $nerrors errors for ${cov_proj_disp}" >> $gh_cov_msg
-            echo "* Detailed coverity report at ${cov_proj}/output/errors/index.html" >> $cov_root_dir/index.html
+            echo "<li><a href=${cov_proj}/output/errors/index.html>Report for ${cov_proj}</a>" >> $cov_root_dir/index.html
         fi
     else
         echo "not ok - coverity failed to run for $cov_proj # SKIP failed to init coverity" >> $cov_stat_tap
@@ -471,7 +471,7 @@ if [ -n "$jenkins_build_passed" ]; then
         cov_stat=$vpath_dir/cov_stat.txt
         cov_stat_tap=$vpath_dir/cov_stat.tap
         cov_build_dir=$vpath_dir/cov_build
-        cov_url_webroot=${JOB_URL}/${BUILD_ID}/Coverity_Reports
+        cov_url_webroot=${JOB_URL}/${BUILD_ID}/Coverity_Report
 
         rm -f $cov_stat $cov_stat_tap
 
@@ -498,7 +498,7 @@ if [ -n "$jenkins_build_passed" ]; then
                 set -eE
             done
             if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
-                echo "Coverity report at $cov_url_webroot" >> $gh_cov_msg
+                echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
                 gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
             fi
             popd
