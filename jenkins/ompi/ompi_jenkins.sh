@@ -291,7 +291,7 @@ function test_cov
             local cov_proj_disp="$(echo $cov_proj|cut -f1 -d_)"
             echo "" >> $gh_cov_msg
             echo "* Coverity found $nerrors errors for ${cov_proj_disp}" >> $gh_cov_msg
-            echo "<li><a href=${cov_proj}/output/errors/index.html>Report for $cov_proj</a>" >> $cov_root_dir/index.html
+            echo "* Detailed coverity report at ${cov_proj}/output/errors/index.html" >> $cov_root_dir/index.html
         fi
     else
         echo "not ok - coverity failed to run for $cov_proj # SKIP failed to init coverity" >> $cov_stat_tap
