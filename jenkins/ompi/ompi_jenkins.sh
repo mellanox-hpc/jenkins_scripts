@@ -262,9 +262,8 @@ function test_cov
 {
     local cov_build_dir=$1
     local cov_proj=$2
-    local cov_url_webroot=$3
-    local cov_make_cmd=$4
-    local cov_directive=$5
+    local cov_make_cmd=$3
+    local cov_directive=$4
 
     local nerrors=0;
 
@@ -280,18 +279,15 @@ function test_cov
     nerrors=$(cov-format-errors --dir $cov_build_dir | awk '/Processing [0-9]+ errors?/ { print $2 }')
 
     index_html=$(cd $cov_build_dir && find . -name index.html | cut -c 3-)
-    local cov_url="$cov_url_webroot/${index_html}"
 
     if [ -n "$nerrors" ]; then
         if [ "$nerrors" = "0" ]; then
             echo ok - coverity found no issues for $cov_proj >> $cov_stat_tap
         else
-            echo "not ok - coverity detected $nerrors failures in $cov_proj # $cov_directive $cov_url" >> $cov_stat_tap
+            echo "not ok - coverity detected $nerrors failures in $cov_proj # $cov_directive" >> $cov_stat_tap
             local cov_proj_disp="$(echo $cov_proj|cut -f1 -d_)"
-            printf "%s\t%s\n" "coverity_for_${cov_proj_disp}" "$cov_url" >> $WORKSPACE/jenkins_sidelinks.txt
-            echo Coverity report: $cov_url
             echo "" >> $gh_cov_msg
-            echo "* Coverity found $nerrors errors for ${cov_proj_disp}: $cov_url" >> $gh_cov_msg
+            echo "* Coverity found $nerrors errors for ${cov_proj_disp}" >> $gh_cov_msg
         fi
     else
         echo "not ok - coverity failed to run for $cov_proj # SKIP failed to init coverity" >> $cov_stat_tap
@@ -471,7 +467,7 @@ if [ -n "$jenkins_build_passed" ]; then
         cov_stat=$vpath_dir/cov_stat.txt
         cov_stat_tap=$vpath_dir/cov_stat.tap
         cov_build_dir=$vpath_dir/cov_build
-        cov_url_webroot=${JOB_URL}/ws/cov_build
+        cov_url_webroot=${JOB_URL}/${BUILD_ID}/Coverity_Reports
 
         rm -f $cov_stat $cov_stat_tap
 
@@ -491,14 +487,15 @@ if [ -n "$jenkins_build_passed" ]; then
                 fi
                 echo Working on $dir
 
-                cov_proj="$(basename $dir)_${BUILD_NUMBER}"
+                cov_proj="$(basename $dir)"
                 cov_dir="$cov_build_dir/$cov_proj"
                 set +eE
                 make $make_cov_opt $make_opt clean 2>&1 > /dev/null
-                test_cov $cov_dir $cov_proj "${cov_url_webroot}/${cov_proj}" "make $make_cov_opt $make_opt all" $cov_directive
+                test_cov $cov_dir $cov_proj "make $make_cov_opt $make_opt all" $cov_directive
                 set -eE
             done
             if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
+                echo "Coverity report at $cov_url_webroot" >> $gh_cov_msg
                 gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
             fi
             popd
