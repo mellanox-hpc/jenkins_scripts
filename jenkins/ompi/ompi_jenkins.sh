@@ -26,7 +26,7 @@ btl_vader=${btl_vader:="yes"}
 # TAP directive for MLNX modules in coverity
 # empty - treat errors as failures
 # can be TODO, SKIP
-mlnx_cov="TODO"
+mlnx_cov="SKIP"
 
 # indicate to coverity which files to exclude from report
 cov_exclude_file_list="oshmem/mca/memheap/ptmalloc/malloc.c"
@@ -260,7 +260,7 @@ function on_exit
 
 function test_cov
 {
-    local cov_build_dir=$1
+    local cov_root_dir=$1
     local cov_proj=$2
     local cov_make_cmd=$3
     local cov_directive=$4
@@ -268,6 +268,9 @@ function test_cov
     local nerrors=0;
 
     module load tools/cov
+
+    local cov_build_dir=$cov_root_dir/$cov_proj
+
     rm -rf $cov_build_dir
     cov-build   --dir $cov_build_dir $cov_make_cmd
 
@@ -288,7 +291,7 @@ function test_cov
             local cov_proj_disp="$(echo $cov_proj|cut -f1 -d_)"
             echo "" >> $gh_cov_msg
             echo "* Coverity found $nerrors errors for ${cov_proj_disp}" >> $gh_cov_msg
-            echo "<li><a href=${cov_proj}/output/errors/index.html>Report for $cov_proj</a>" >> $cov_build_dir/index.html
+            echo "<li><a href=${cov_proj}/output/errors/index.html>Report for $cov_proj</a>" >> $cov_root_dir/index.html
         fi
     else
         echo "not ok - coverity failed to run for $cov_proj # SKIP failed to init coverity" >> $cov_stat_tap
@@ -489,10 +492,9 @@ if [ -n "$jenkins_build_passed" ]; then
                 echo Working on $dir
 
                 cov_proj="$(basename $dir)"
-                cov_dir="$cov_build_dir/$cov_proj"
                 set +eE
                 make $make_cov_opt $make_opt clean 2>&1 > /dev/null
-                test_cov $cov_dir $cov_proj "make $make_cov_opt $make_opt all" $cov_directive
+                test_cov $cov_build_dir $cov_proj "make $make_cov_opt $make_opt all" $cov_directive
                 set -eE
             done
             if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
