@@ -31,6 +31,10 @@ mlnx_cov="SKIP"
 # indicate to coverity which files to exclude from report
 cov_exclude_file_list="oshmem/mca/memheap/ptmalloc/malloc.c"
 
+# global mpirun options
+export OMPI_MCA_mpi_warn_on_fork=0
+export OMPI_MCA_btl_openib_warn_default_gid_prefix=0
+
 # exclude hwloc external package
 if [ -d "opal/mca/hwloc/hwloc" ]; then
     for excl in $(find opal/mca/hwloc/hwloc* -type f -name "*.[ch]"); do
@@ -390,16 +394,15 @@ function test_mindist()
     if [ $val -gt 0 ]; then
         echo "test the dist mapping policy in $OMPI_HOME"
         $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
-        mca_mapper="-mca mpi_warn_on_fork 0 -mca btl_openib_warn_default_gid_prefix 0"
         val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
         if [ $val -gt 0 ]; then
             for hca_dev in $(ibstat -l); do
                 var=$(cat /sys/class/infiniband/${hca_dev}/device/numa_node)
                 export TEST_CLOSEST_NUMA=$var
-                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
+                $OMPI_HOME/bin/mpirun -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -411,10 +414,10 @@ function test_mindist()
             for hca_dev in $(ibstat -l); do
                 var=$(cat /sys/class/infiniband/${hca_dev}/device/numa_node)
                 export TEST_CLOSEST_NUMA=$var
-                $OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
+                $OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun -np 8 $mca_mapper --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun -np 8 --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
