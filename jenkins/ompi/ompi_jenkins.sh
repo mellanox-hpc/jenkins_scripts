@@ -8,7 +8,7 @@ jenkins_test_examples=${jenkins_test_examples:="yes"}
 jenkins_test_oshmem=${jenkins_test_oshmem:="yes"}
 jenkins_test_vader=${jenkins_test_vader:="yes"}
 jenkins_test_check=${jenkins_test_check:="yes"}
-jenkins_test_src_rpm=${jenkins_test_src_rpm:="no"}
+jenkins_test_src_rpm=${jenkins_test_src_rpm:="yes"}
 jenkins_test_help_txt=${jenkins_test_help_txt:="no"}
 jenkins_test_threads=${jenkins_test_threads:="yes"}
 jenkins_test_cov=${jenkins_test_cov:="yes"}
