@@ -116,7 +116,13 @@ cd $WORKSPACE
 
 if [ "$jenkins_test_build" = "yes" ]; then
     echo "Building PMIX"
+    wget http://sourceforge.net/projects/levent/files/libevent/libevent-2.0/libevent-2.0.22-stable.tar.gz
+    tar zxf libevent-2.0.22-stable.tar.gz
+    cd libevent-2.0.22-stable
+    libevent_dir=$PWD/install
+    ./autogen.sh && ./configure --prefix=$libevent_dir && make && make install
 
+    cd $WORKSPACE
     if [ -x "autogen.sh" ]; then
         autogen_script=./autogen.sh
     else
@@ -125,7 +131,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
 
     # build pmix
     $autogen_script 
-    echo ./configure --prefix=$PMIX_HOME | bash -xeE 
+    echo ./configure --prefix=$PMIX_HOME --with-libevent=$libevent_dir | bash -xeE
     make $make_opt install 
 
     # make check
