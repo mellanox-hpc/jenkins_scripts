@@ -1,6 +1,10 @@
 #!/bin/bash -xeE
 export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
+rel_path=$(dirname $0)
+abs_path=$(readlink -f $rel_path)
+source $abs_path/../functions.sh
+
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_check=${jenkins_test_check:="yes"}
 timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
@@ -17,8 +21,6 @@ fi
 PMIX_HOME=$WORKSPACE/pmix_install
 
 make_opt="-j$(nproc)"
-rel_path=$(dirname $0)
-abs_path=$(readlink -f $rel_path)
 
 # extract jenkins commands from function args
 function check_commands
@@ -138,6 +140,22 @@ if [ "$jenkins_test_build" = "yes" ]; then
     if [ "$jenkins_test_check" = "yes" ]; then
         make $make_opt check || exit 12
     fi
+
+    # make cov
+    make $make_opt clean
+
+    gh_cov_msg=$WORKSPACE/cov_gh_msg.txt
+    cov_stat_tap=$WORKSPACE/cov_test.tap
+    cov_url_webroot=${JOB_URL}/${BUILD_ID}/Coverity_Report
+
+    set +e
+    test_cov $WORKSPACE "pmix" "make $make_opt all" "TODO"
+    if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
+        echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
+        gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
+    fi
+    set -e
+
 fi
 
 #
