@@ -15,6 +15,7 @@ jenkins_test_cov=${jenkins_test_cov:="yes"}
 jenkins_test_known_issues=${jenkins_test_known_issues:="no"}
 jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
+jenkins_test_comments=${jenkins_test_comments:="no"}
 timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
 
 # internal flags to select/unselect OMPI transports used in test
@@ -122,6 +123,7 @@ if [ "$jenkins_test_debug" = "no" ]; then
         jenkins_test_help_txt=yes
         jenkins_test_src_rpm=yes
         jenkins_test_cov=yes
+        jenkins_test_comments="yes"
     fi
 
     if [ $ghprbTargetBranch == "v1.8" ]; then
@@ -502,7 +504,9 @@ if [ -n "$jenkins_build_passed" ]; then
             done
             if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
                 echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
-                gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
+                if [ "$jenkins_test_comments" = "yes" ]; then
+                    gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
+                fi
             fi
             popd
         fi
