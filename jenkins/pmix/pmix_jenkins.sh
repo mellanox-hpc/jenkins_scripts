@@ -202,7 +202,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
     # run valgrind
     module load tools/valgrind
-    vg_opt="--tool=memcheck --leak-check=full --error-exitcode=0 --trace-children=yes  --trace-children-skip=*/sed,*/collect2,*/gcc,*/cat,*/rm,*/ls --track-origins=yes --xml=yes --xml-file=valgrind.xml --fair-sched=try --gen-suppressions=all"
+    vg_opt="--tool=memcheck --leak-check=full --error-exitcode=0 --trace-children=yes  --trace-children-skip=*/sed,*/collect2,*/gcc,*/cat,*/rm,*/ls --track-origins=yes --xml=yes --xml-file=valgrind%p.xml --fair-sched=try --gen-suppressions=all"
     valgrind $vg_opt  ./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]"
 
     valgrind $vg_opt  ./pmix_test -n 4 --job-fence -c
