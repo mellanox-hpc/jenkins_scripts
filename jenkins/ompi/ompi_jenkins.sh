@@ -610,9 +610,9 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             if [ "$jenkins_test_known_issues" == "no" ]; then 
                 btl_tcp=no
                 btl_vader=no
-                #btl_sm=no
             fi
             btl_openib=no
+            btl_sm=no
             for exe in overlap latency; do 
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 4 $exe_path 8)
