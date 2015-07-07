@@ -157,17 +157,18 @@ function mpi_runner()
     local exe_args=${3}
     local common_mca="-bind-to core"
     local mca="$common_mca"
+    local mpirun="$OMPI_HOME/bin/mpirun"
 
     if [ "$btl_tcp" == "yes" ]; then
-        $timeout_exe mpirun -np $np $mca -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
+        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_sm" == "yes" ]; then
-        $timeout_exe mpirun -np $np $mca -mca pml ob1 -mca btl self,sm    ${exe_path} ${exe_args}
+        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,sm    ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_vader" == "yes" ]; then
-        $timeout_exe mpirun -np $np $mca -mca pml ob1 -mca btl self,vader ${exe_path} ${exe_args}
+        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,vader ${exe_path} ${exe_args}
     fi
 
 
@@ -181,14 +182,14 @@ function mpi_runner()
             echo "Running $exe_path ${exe_args}"
 
             if [ "$btl_openib" == "yes" ]; then
-                $timeout_exe mpirun -np $np $mca -mca pml ob1 -mca btl self,openib      ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib      ${exe_path} ${exe_args}
             fi
-            $timeout_exe mpirun -np $np $mca -mca pml cm  -mca mtl mxm                  ${exe_path} ${exe_args}
+            $timeout_exe $mpirun -np $np $mca -mca pml cm  -mca mtl mxm                  ${exe_path} ${exe_args}
             if [ $val -gt 0 ]; then
-                $timeout_exe mpirun -np $np $mca -mca pml yalla ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca pml yalla ${exe_path} ${exe_args}
             fi
             if [ -n "$mpi_custom_args" ]; then
-                $timeout_exe mpirun -np $np $mca $mpi_custome_args ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca $mpi_custome_args ${exe_path} ${exe_args}
             fi
         fi
     done
