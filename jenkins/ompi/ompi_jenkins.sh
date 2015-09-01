@@ -612,7 +612,11 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 btl_tcp=no
                 btl_vader=no
             fi
-            btl_openib=no
+
+            # in the master branch openib was fixed to support MT models
+            if [ "$ghprbTargetBranch" != "master" ]; then
+                btl_openib=no
+            fi
             btl_sm=no
             for exe in overlap latency; do 
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
