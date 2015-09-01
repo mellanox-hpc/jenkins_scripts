@@ -1,6 +1,10 @@
 #!/bin/bash -xeE
 export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
+# hack -- remove after hcoll fix
+export HCOLL_ML_LARGE_BUFFER_SUPPORT=0
+
+
 help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll"}
 hca_port=${hca_port:=1}
 jenkins_test_build=${jenkins_test_build:="yes"}
