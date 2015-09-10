@@ -1,10 +1,6 @@
 #!/bin/bash -xeE
 export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
-# hack -- remove after hcoll fix
-export HCOLL_ML_LARGE_BUFFER_SUPPORT=0
-
-
 help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll"}
 hca_port=${hca_port:=1}
 jenkins_test_build=${jenkins_test_build:="yes"}
@@ -551,7 +547,7 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
 
         # build src.rpm
         # svn_r=$(git rev-parse --short=7 HEAD| tr -d '\n') ./contrib/dist/make_tarball --distdir $tarball_dir
-        tarball_src=$(ls -1 $tarball_dir/openmpi-*.tar.bz2|sort -h -r|head -1)
+        tarball_src=$(ls -1 $tarball_dir/openmpi-*.tar.bz2|sort -r|head -1)
 
         echo "Building OMPI bin.rpm"
         rpm_flags="--define 'mflags $make_opt' --define '_source_filedigest_algorithm md5' --define '_binary_filedigest_algorithm md5'"
