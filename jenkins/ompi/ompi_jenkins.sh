@@ -16,6 +16,7 @@ jenkins_test_known_issues=${jenkins_test_known_issues:="no"}
 jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
+jenkins_test_slurm=${jenkins_test_slurm:="yes"} 
 timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
 
 # internal flags to select/unselect OMPI transports used in test
@@ -52,6 +53,8 @@ if [ -z "$WORKSPACE" ]; then
     NOJENKINS=${NOJENKINS:="yes"}
     ghprbTargetBranch=${ghprbTargetBranch:="mellanox-v1.8"}
 fi
+
+cd $WORKSPACE
 
 gh_cov_msg="$WORKSPACE/cov_file_${BUILD_NUMBER}.txt"
 OMPI_HOME1=$WORKSPACE/ompi_install1
@@ -149,6 +152,10 @@ if [ "$jenkins_test_threads" = "yes" ]; then
     extra_conf="--enable-mpi-thread-multiple --enable-opal-multi-threads $extra_conf"
 fi
 
+if [ "$jenkins_test_slurm" = "yes" ]; then
+    extra_conf="--with-slurm --with-pmi $extra_conf"
+fi
+
 
 function mpi_runner()
 {
@@ -230,6 +237,25 @@ function oshmem_runner()
             fi
         fi
     done
+}
+
+function slurm_runner()
+{
+    local np=$1
+    local exe_path=$2
+    local exe_args=${3}
+
+    command -v srun >/dev/null 2>&1 || { echo "srun is not found."; exit 1; }
+
+    # check PMI1
+    if [ "$btl_tcp" == "yes" ]; then
+        $timeout_exe srun -n $np env OMPI_MCA_pml=ob1 OMPI_MCA_btl=self,tcp ${exe_path} ${exe_args}
+    fi
+
+    # check PMI2
+    if [ "$btl_tcp" == "yes" ]; then
+        $timeout_exe srun -n $np --mpi=pmi2 env OMPI_MCA_pml=ob1 OMPI_MCA_btl=self,tcp ${exe_path} ${exe_args}
+    fi
 }
 
 function on_start()
@@ -584,6 +610,10 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             for exe in hello_c ring_c; do 
                 exe_path=${exe_dir}/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 8 $exe_path)
+                # launch using slurm launcher in case mpi is configured with pmi support
+                if [ "$jenkins_test_slurm" = "yes" ]; then
+                    (slurm_runner 2 $exe_path)
+                fi
             done
 
             if [ "$jenkins_test_oshmem" = "yes" ]; then 
