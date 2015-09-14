@@ -202,16 +202,17 @@ function oshmem_runner()
     local exe_args=${3}
     local spml_yoda="--mca spml yoda"
     local spml_ikrit="--mca spml ikrit"
+    local oshrun="$OMPI_HOME/bin/oshrun"
 
     oshmem_info -a -l 9
     local common_mca="--bind-to core -x SHMEM_SYMMETRIC_HEAP_SIZE=1024M"
     local mca="$common_mca"
 
-    $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
-    $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm    ${exe_path} ${exe_args}
+    $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
+    $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm    ${exe_path} ${exe_args}
 
     if [ "$jenkins_test_vader" == "yes" ]; then
-        $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,vader ${exe_path} ${exe_args}
+        $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,vader ${exe_path} ${exe_args}
     fi
 
 
@@ -222,11 +223,11 @@ function oshmem_runner()
             mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca"
             mca="$mca --mca rmaps_base_dist_hca $hca --mca sshmem_verbs_hca_name $hca"
             echo "Running $exe_path ${exe_args}"
-            $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${exe_path} ${exe_args}
-            $timeout_exe oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${exe_path} ${exe_args}
-            $timeout_exe oshrun -np $np $mca $spml_ikrit -mca pml cm  -mca mtl mxm            ${exe_path} ${exe_args}
+            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${exe_path} ${exe_args}
+            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${exe_path} ${exe_args}
+            $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml cm  -mca mtl mxm            ${exe_path} ${exe_args}
             if [ -n "$oshmem_custom_args" ]; then
-                $timeout_exe oshrun -np $np $mca $oshmem_custom_args ${exe_path} ${exe_args}
+                $timeout_exe $oshrun -np $np $mca $oshmem_custom_args ${exe_path} ${exe_args}
             fi
         fi
     done
