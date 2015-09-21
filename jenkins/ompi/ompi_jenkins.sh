@@ -16,7 +16,7 @@ jenkins_test_known_issues=${jenkins_test_known_issues:="no"}
 jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
-timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
+timeout_exe=${timout_exe:="timeout -s SIGSEGV 10m"}
 
 # internal flags to select/unselect OMPI transports used in test
 btl_tcp=${btl_tcp:="yes"}
