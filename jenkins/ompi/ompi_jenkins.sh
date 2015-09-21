@@ -551,7 +551,7 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
         tarball_src=$(ls -1 $tarball_dir/openmpi-*.tar.bz2|sort -r|head -1)
 
         echo "Building OMPI bin.rpm"
-        rpm_flags="--define 'mflags $make_opt' --define '_source_filedigest_algorithm md5' --define '_binary_filedigest_algorithm md5'"
+        rpm_flags="--define 'mflags -j8' --define '_source_filedigest_algorithm md5' --define '_binary_filedigest_algorithm md5'"
         (cd ./contrib/dist/linux && env rpmbuild_options="$rpm_flags" rpmtopdir=$topdir ./buildrpm.sh $tarball_src)
     fi
 fi
