@@ -550,6 +550,9 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
             fi
         done
 
+        # ugly hack, make_tarball has hardcoded "-j32" and sometimes it fails on some race
+        sed -i -e s,-j32,-j8,g contrib/dist/make_tarball
+        
         chmod +x ./contrib/dist/make* ./contrib/dist/linux/buildrpm.sh
         echo contrib/dist/make_tarball $make_dist_args | bash -xeE || exit 11
 
