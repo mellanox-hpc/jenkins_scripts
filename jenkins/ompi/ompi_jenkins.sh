@@ -191,9 +191,10 @@ function mpi_runner()
             if [ "$btl_openib" == "yes" ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib      ${exe_path} ${exe_args}
             fi
-            $timeout_exe $mpirun -np $np $mca -mca pml cm  -mca mtl mxm                  ${exe_path} ${exe_args}
             if [ $val -gt 0 ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml yalla ${exe_path} ${exe_args}
+            else
+                $timeout_exe $mpirun -np $np $mca -mca pml cm -mca mtl mxm ${exe_path} ${exe_args}
             fi
             if [ -n "$mpi_custom_args" ]; then
                 $timeout_exe $mpirun -np $np $mca $mpi_custome_args ${exe_path} ${exe_args}
