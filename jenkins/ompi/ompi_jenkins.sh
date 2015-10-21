@@ -1,7 +1,7 @@
 #!/bin/bash -xeE
 export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
-help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll"}
+help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll ompi/mca/pml/yall ompi/mca/pml/ucx ompi/mca/spml/ucx"}
 hca_port=${hca_port:=1}
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_examples=${jenkins_test_examples:="yes"}
@@ -17,6 +17,7 @@ jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
 jenkins_test_slurm=${jenkins_test_slurm:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
+jenkins_test_ucx=${jenkins_test_ucx:="yes"}
 
 if [ -n "$EXECUTOR_NUMBER" ]; then
     AFFINITY="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
@@ -185,19 +186,23 @@ function mpi_runner()
     fi
 
 
-    local val=$(ompi_info --param pml all --level 9 | grep yalla | wc -l)
+    local has_yalla=$(ompi_info --param pml all --level 9 | grep yalla | wc -l)
+    local has_ucx=$(ompi_info --param pml all --level 9 | grep ucx | wc -l)
     for hca_dev in $(ibstat -l); do
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca"
+            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca"
 
             echo "Running $exe_path ${exe_args}"
 
             if [ "$btl_openib" == "yes" ]; then
-                $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib      ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib ${exe_path} ${exe_args}
             fi
-            if [ $val -gt 0 ]; then
+            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
+                $timeout_exe $mpirun -np $np $mca -mca pml ucx ${exe_path} ${exe_args}
+            fi
+            if [ $has_yalla -gt 0 ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml yalla ${exe_path} ${exe_args}
             else
                 $timeout_exe $mpirun -np $np $mca -mca pml cm -mca mtl mxm ${exe_path} ${exe_args}
@@ -229,17 +234,24 @@ function oshmem_runner()
         $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,vader ${exe_path} ${exe_args}
     fi
 
+    local has_ucx=$(ompi_info --param pml all --level 9 | grep ucx | wc -l)
 
     for hca_dev in $(ibstat -l); do
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
             mca="$common_mca"
-            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca"
+            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca"
             mca="$mca --mca rmaps_base_dist_hca $hca --mca sshmem_verbs_hca_name $hca"
             echo "Running $exe_path ${exe_args}"
             $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${exe_path} ${exe_args}
             $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${exe_path} ${exe_args}
             $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml cm  -mca mtl mxm            ${exe_path} ${exe_args}
+            $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla                       ${exe_path} ${exe_args}
+
+            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
+                $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml ucx                     ${exe_path} ${exe_args}
+            fi
+
             if [ -n "$oshmem_custom_args" ]; then
                 $timeout_exe $oshrun -np $np $mca $oshmem_custom_args ${exe_path} ${exe_args}
             fi
