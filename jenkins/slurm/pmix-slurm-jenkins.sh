@@ -234,7 +234,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     cd munge-0.5.11
     MUNGE_DIR=$PWD/install
     rm -rf $MUNGE_DIR
-   
+
     ./configure --prefix=$MUNGE_DIR && make && make install
     if [ ! -f ${MUNGE_DIR}/etc/munge/munge.key ]; then
         dd if=/dev/urandom bs=1 count=1024 >${MUNGE_DIR}/etc/munge/munge.key
@@ -251,7 +251,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     ./autogen.sh && ./configure --prefix=$LIBEVENT_DIR && make && make install
 
     cd $TMP_DIR
-    git clone https://github.com/open-mpi/pmix.git
+    git clone https://github.com/pmix/master.git pmix
     cd pmix
     PMIX_DIR=$PWD/install
     if [ -x "autogen.sh" ]; then
@@ -387,7 +387,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
     run_tap=$WORKSPACE/run_test.tap
     rm -rf $run_tap
-    
+
     echo "1..13" > $run_tap
 
     test_id=1
