@@ -691,8 +691,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --error-exitcode=3"
             mpi_opt="-mca coll ^hcoll -np 1"
 
-            mpi_exe=$OMPI_HOME/tests/examples/hello_c
-            shmem_exe=$OMPI_HOME/tests/examples/oshmem_shmalloc
+            mpi_exe=$OMPI_HOME/examples/hello_c
+            shmem_exe=$OMPI_HOME/examples/oshmem_shmalloc
 
             PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpirun $mpi_opt -mca pml ob1   -mca btl self,sm valgrind $vg_opt $mpi_exe
             PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml yoda -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
