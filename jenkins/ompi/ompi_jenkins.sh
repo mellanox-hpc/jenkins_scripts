@@ -103,30 +103,6 @@ function check_commands
     fi
 }
 
-# check for jenkins commands in PR title
-if [ -n "$ghprbPullTitle" ]; then
-    check_commands "$ghprbPullTitle"
-fi
-
-# check for jenkins command in PR last comment
-if [ -n "$ghprbPullLink" ]; then
-    set +xeE
-    pr_url=$(echo $ghprbPullLink | sed -e s,github.com,api.github.com/repos,g -e s,pull,issues,g)
-    pr_url="${pr_url}/comments"
-    pr_file="$WORKSPACE/github_pr_${ghprbPullId}.json"
-    curl -s $pr_url > $pr_file
-    echo Fetching PR comments from URL: $pr_url
-
-    # extracting last comment
-    pr_comments="$(cat $pr_file | jq -M -a '.[length-1] | .body')"
-
-    echo Last comment: $pr_comments
-    if [ -n "$pr_comments" ]; then
-        check_commands "$pr_comments"
-    fi
-    set -xeE
-fi
-
 
 if [ "$jenkins_test_debug" = "no" ]; then
     if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
@@ -153,6 +129,31 @@ if [ -n "$NOJENKINS" -a -d $OMPI_HOME1 ]; then
     jenkins_test_src_rpm=no
     jenkins_build_passed=1
 fi
+
+# check for jenkins commands in PR title
+if [ -n "$ghprbPullTitle" ]; then
+    check_commands "$ghprbPullTitle"
+fi
+
+# check for jenkins command in PR last comment
+if [ -n "$ghprbPullLink" ]; then
+    set +xeE
+    pr_url=$(echo $ghprbPullLink | sed -e s,github.com,api.github.com/repos,g -e s,pull,issues,g)
+    pr_url="${pr_url}/comments"
+    pr_file="$WORKSPACE/github_pr_${ghprbPullId}.json"
+    curl -s $pr_url > $pr_file
+    echo Fetching PR comments from URL: $pr_url
+
+    # extracting last comment
+    pr_comments="$(cat $pr_file | jq -M -a '.[length-1] | .body')"
+
+    echo Last comment: $pr_comments
+    if [ -n "$pr_comments" ]; then
+        check_commands "$pr_comments"
+    fi
+    set -xeE
+fi
+
 
 echo Running following tests:
 set|grep jenkins_test_
