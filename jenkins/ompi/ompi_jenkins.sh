@@ -18,6 +18,7 @@ jenkins_test_debug=${jenkins_test_debug:="no"}
 jenkins_test_slurm=${jenkins_test_slurm:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
 jenkins_test_ucx=${jenkins_test_ucx:="no"}
+jenkins_test_vg=${jenkins_test_vg:="yes"}
 
 if [ -n "$EXECUTOR_NUMBER" ]; then
     AFFINITY="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
@@ -515,7 +516,7 @@ if [ -n "$jenkins_build_passed" ]; then
     # check coverity
     if [ "$jenkins_test_cov" = "yes" ]; then
         vpath_dir=$WORKSPACE
-        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll"
+        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll ompi/mca/pml/ucx"
         cov_stat=$vpath_dir/cov_stat.txt
         cov_stat_tap=$vpath_dir/cov_stat.tap
         cov_build_dir=$vpath_dir/cov_build
@@ -679,6 +680,26 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             btl_tcp=yes
             btl_sm=yes
             btl_vader=yes
+        fi
+
+        if [ "$jenkins_test_vg" = "yes" ]; then 
+
+            module load dev/mofed_valgrind
+            module load tools/valgrind
+
+            exe_dir=$OMPI_HOME/examples
+            vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --error-exitcode=3"
+            mpi_opt="-mca coll ^hcoll -np 1"
+
+            mpi_exe=$OMPI_HOME/tests/examples/hello_c
+            shmem_exe=$OMPI_HOME/tests/examples/oshmem_shmalloc
+
+            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpirun $mpi_opt -mca pml ob1   -mca btl self,sm valgrind $vg_opt $mpi_exe
+            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml yoda -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
+
+            module unload dev/mofed_valgrind
+            module unload tools/valgrind
+
         fi
     done
 
