@@ -687,6 +687,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             module load dev/mofed_valgrind
             module load tools/valgrind
+            module load mlnx-hpc-latest/gcc/stack
 
             exe_dir=$OMPI_HOME/examples
             vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --error-exitcode=3"
@@ -694,12 +695,16 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             mpi_exe=$OMPI_HOME/examples/hello_c
             shmem_exe=$OMPI_HOME/examples/oshmem_shmalloc
+            shmem_puts_exe=$OMPI_HOME/examples/oshmem_strided_puts
 
             PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpirun $mpi_opt -mca pml ob1   -mca btl self,sm valgrind $vg_opt $mpi_exe
             PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml yoda -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
 
+            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml ikrit -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
+
             module unload dev/mofed_valgrind
             module unload tools/valgrind
+            module unload mlnx-hpc-latest/gcc/stack
 
         fi
     done
