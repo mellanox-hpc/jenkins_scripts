@@ -7,6 +7,7 @@ source $abs_path/../functions.sh
 
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_check=${jenkins_test_check:="yes"}
+jenkins_test_src_rpm=${jenkins_test_src_rpm:="yes"}
 timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
 
 # prepare to run from command line w/o jenkins
@@ -19,6 +20,8 @@ if [ -z "$WORKSPACE" ]; then
 fi
 
 PMIX_HOME=$WORKSPACE/pmix_install
+topdir=$WORKSPACE/rpms
+tarball_dir=${WORKSPACE}/tarball
 
 make_opt="-j$(nproc)"
 
@@ -91,10 +94,10 @@ function on_start()
     echo $distro_name -- $distro_ver
 
     # save current environment to support debugging
-    set +x
-    env| sed -ne "s/\(\w*\)=\(.*\)\$/export \1='\2'/p" > $WORKSPACE/test_env.sh
-    chmod 755 $WORKSPACE/test_env.sh
-    set -x
+#    set +x
+#    env| sed -ne "s/\(\w*\)=\(.*\)\$/export \1='\2'/p" > $WORKSPACE/test_env.sh
+#    chmod 755 $WORKSPACE/test_env.sh
+#    set -x
 }
 
 function on_exit
@@ -147,9 +150,11 @@ if [ "$jenkins_test_build" = "yes" ]; then
         autogen_script=./autogen.pl
     fi
 
+    configure_args=--with-libevent=$libevent_dir
+
     # build pmix
     $autogen_script 
-    echo ./configure --prefix=$PMIX_HOME --with-libevent=$libevent_dir | bash -xeE
+    echo ./configure --prefix=$PMIX_HOME $configure_args | bash -xeE
     make $make_opt install 
 
     # make check
@@ -172,6 +177,45 @@ if [ "$jenkins_test_build" = "yes" ]; then
     fi
     set -e
 
+fi
+
+if [ "$jenkins_test_src_rpm" = "yes" ]; then
+
+    # check distclean
+    make $make_opt distclean 
+    $autogen_script 
+    echo ./configure --prefix=$PMIX_HOME $configure_args | bash -xeE || exit 11
+
+    if [ -x /usr/bin/dpkg-buildpackage ]; then
+        echo "Do not support PMIX on debian"
+    else
+        echo "Building PMIX src.rpm"
+        rm -rf $tarball_dir
+        mkdir -p $tarball_dir
+
+        make_dist_args="--highok --distdir=$tarball_dir --greekonly"
+
+        for arg in no-git-update dirtyok verok; do
+            if grep $arg contrib/make_tarball 2>&1 > /dev/null; then 
+                make_dist_args="$make_dist_args --${arg}"
+            fi
+        done
+
+        # ugly hack, make_tarball has hardcoded "-j32" and sometimes it fails on some race
+        sed -i -e s,-j32,-j8,g contrib/make_tarball
+
+        export LIBEVENT=$libevent_dir
+        chmod +x ./contrib/make* ./contrib/buildrpm.sh
+        echo contrib/make_tarball $make_dist_args | bash -xeE || exit 11
+
+        # build src.rpm
+        # svn_r=$(git rev-parse --short=7 HEAD| tr -d '\n') ./contrib/make_tarball --distdir=$tarball_dir
+        tarball_src=$(ls -1 $tarball_dir/pmix-*.tar.bz2|sort -r|head -1)
+
+        echo "Building PMIX bin.rpm"
+        rpm_flags="--define 'mflags -j8' --define '_source_filedigest_algorithm md5' --define '_binary_filedigest_algorithm md5'"
+        (cd ./contrib/ && env rpmbuild_options="$rpm_flags" rpmtopdir=$topdir ./buildrpm.sh $tarball_src)
+    fi
 fi
 
 #
