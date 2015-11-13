@@ -388,7 +388,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
     run_tap=$WORKSPACE/run_test.tap
     rm -rf $run_tap
 
-    echo "1..13" > $run_tap
+    echo "1..11" > $run_tap
 
     test_id=1
     # 1-sinfo
@@ -416,31 +416,23 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
     test_exec="env VERBOSE=3 $MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmi2_client"
     check_result "using pmix for app/pmi2" "$test_exec"
 
-    # 7-blocking fence with data exchange among all processes from two namespaces:
-    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --ns-dist 3:1 --fence \"[db | 0:0-2;1:3]\""
+    # 7-blocking fence with data exchange among all processes from single namespaces:
+    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --fence \"[db | 0:]\""
     check_result "blocking fence w/ data all ti1" "$test_exec" "OK" 2
 
-    # 8-blocking fence with data exchange among all processes from two namespaces:
-    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --ns-dist 3:1 --fence \"[db | 0:;1:3]\""
-    check_result "blocking fence w/ data all ti2" "$test_exec" "OK" 2
-
-    # 9-blocking fence with data exchange among all processes from two namespaces:
-    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --ns-dist 3:1 --fence \"[db | 0:;1:]\""
-    check_result "blocking fence w/ data all ti3" "$test_exec" "OK" 2
-
-    # 10-non-blocking fence without data exchange among processes from the 1st namespace
-    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --ns-dist 3:1 --fence \"[0:]\""
+    # 8-non-blocking fence without data exchange among processes from the 1st namespace
+    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --fence \"[0:]\""
     check_result "non-blocking fence w/o data" "$test_exec" "OK" 2
 
-    # 11-blocking fence without data exchange among processes from the 1st namespace
-    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --ns-dist 3:1 --fence \"[b | 0:]\""
+    # 9-blocking fence without data exchange among processes from the 1st namespace
+    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --fence \"[b | 0:]\""
     check_result "blocking fence w/ data" "$test_exec" "OK" 2
 
-    # 12-non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
-    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --ns-dist 3:1 --fence \"[d | 0:]\" --noise \"[0:0,1]\""
+    # 10-non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
+    test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100  --fence \"[d | 0:]\" --noise \"[0:0,1]\""
     check_result "non-blocking fence w/ data" "$test_exec" "OK" 2
 
-    # 13-blocking fence with data exchange across processes from the same namespace.
+    # 11-blocking fence with data exchange across processes from the same namespace.
     test_exec="$MUNGE_PRELOAD $TARGET_DIR/bin/srun ${PARTITION} -n2 --time=2 --mpi=pmix $PMIX_DIR/bin/pmix_client -n 2 --timeout 100 --job-fence -c"
     check_result "blocking fence w/ data on the same nspace" "$test_exec" "OK" 2
 fi
