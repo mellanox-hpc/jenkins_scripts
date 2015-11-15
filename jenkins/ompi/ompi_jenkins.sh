@@ -690,7 +690,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             module load mlnx-hpc-latest/gcc/stack
 
             exe_dir=$OMPI_HOME/examples
-            vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --error-exitcode=3"
+            vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3"
             mpi_opt="-mca coll ^hcoll -np 1"
 
             mpi_exe=$OMPI_HOME/examples/hello_c
@@ -700,7 +700,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpirun $mpi_opt -mca pml ob1   -mca btl self,sm valgrind $vg_opt $mpi_exe
             PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml yoda -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
 
-            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml ikrit -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
+            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
 
             module unload dev/mofed_valgrind
             module unload tools/valgrind
