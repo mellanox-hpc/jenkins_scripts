@@ -517,7 +517,10 @@ if [ -n "$jenkins_build_passed" ]; then
     # check coverity
     if [ "$jenkins_test_cov" = "yes" ]; then
         vpath_dir=$WORKSPACE
-        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll ompi/mca/pml/ucx"
+        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll"
+        if [ "$jenkins_test_ucx" = "yes" ]; then
+            cov_proj="$cov_proj ompi/mca/pml/ucx"
+        fi
         cov_stat=$vpath_dir/cov_stat.txt
         cov_stat_tap=$vpath_dir/cov_stat.tap
         cov_build_dir=$vpath_dir/cov_build
