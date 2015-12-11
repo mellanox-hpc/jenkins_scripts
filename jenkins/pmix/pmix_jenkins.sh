@@ -8,6 +8,10 @@ source $abs_path/../functions.sh
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_check=${jenkins_test_check:="yes"}
 jenkins_test_src_rpm=${jenkins_test_src_rpm:="yes"}
+jenkins_test_cov=${jenkins_test_cov:="yes"}
+jenkins_test_comments=${jenkins_test_comments:="no"}
+jenkins_test_vg=${jenkins_test_vg:="yes"}
+
 timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
 
 # prepare to run from command line w/o jenkins
@@ -19,9 +23,12 @@ if [ -z "$WORKSPACE" ]; then
     NOJENKINS=${NOJENKINS:="yes"}
 fi
 
-PMIX_HOME=$WORKSPACE/pmix_install
-topdir=$WORKSPACE/rpms
-tarball_dir=${WORKSPACE}/tarball
+prefix=jenkins
+mkdir -p ${WORKSPACE}/${prefix}
+pmix_dir=${WORKSPACE}/${prefix}/install
+build_dir=${WORKSPACE}/${prefix}/build
+rpm_dir=${WORKSPACE}/${prefix}/rpms
+tarball_dir=${WORKSPACE}/${prefix}/tarball
 
 make_opt="-j$(nproc)"
 
@@ -108,7 +115,7 @@ function on_exit
     if [ $rc -ne 0 ]; then
         # FIX: when rpmbuild fails, it leaves folders w/o any permissions even for owner
         # jenkins fails to remove such and fails
-        find $topdir -type d -exec chmod +x {} \;
+        find $rpm_dir -type d -exec chmod +x {} \;
     fi
 }
 
@@ -134,9 +141,10 @@ on_start
 
 
 cd $WORKSPACE
-
 if [ "$jenkins_test_build" = "yes" ]; then
-    echo "Building PMIX"
+    echo "Checking for build ..."
+
+    cd ${WORKSPACE}/${prefix}
     wget http://sourceforge.net/projects/levent/files/libevent/libevent-2.0/libevent-2.0.22-stable.tar.gz
     tar zxf libevent-2.0.22-stable.tar.gz
     cd libevent-2.0.22-stable
@@ -154,37 +162,70 @@ if [ "$jenkins_test_build" = "yes" ]; then
 
     # build pmix
     $autogen_script 
-    echo ./configure --prefix=$PMIX_HOME $configure_args | bash -xeE
-    make $make_opt install 
+    echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE
+    make $make_opt install
+    jenkins_build_passed=1
 
     # make check
     if [ "$jenkins_test_check" = "yes" ]; then
         make $make_opt check || exit 12
     fi
-
-    # make cov
-    make $make_opt clean
-
-    gh_cov_msg=$WORKSPACE/cov_gh_msg.txt
-    cov_stat_tap=$WORKSPACE/cov_test.tap
-    cov_url_webroot=${JOB_URL}/${BUILD_ID}/Coverity_Report
-
-    set +e
-    test_cov $WORKSPACE "pmix" "make $make_opt all" "TODO"
-    if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
-        echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
-        gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
-    fi
-    set -e
-
 fi
 
+cd $WORKSPACE
+if [ -n "jenkins_build_passed" -a "$jenkins_test_cov" = "yes" ]; then
+    echo "Checking for coverity ..."
+
+    vpath_dir=$WORKSPACE
+    cov_proj="all"
+    gh_cov_msg=$WORKSPACE/cov_gh_msg.txt
+    cov_stat=$vpath_dir/cov_stat.txt
+    cov_stat_tap=$vpath_dir/cov_stat.tap
+    cov_build_dir=$vpath_dir/${prefix}/cov_build
+    cov_url_webroot=${JOB_URL}/${BUILD_ID}/Coverity_Report
+
+    rm -f $cov_stat $cov_stat_tap
+
+    if [ -d "$vpath_dir" ]; then
+        mkdir -p $cov_build_dir
+        pushd $vpath_dir
+        for dir in $cov_proj; do
+            if [ "$dir" = "all" ]; then
+                make_cov_opt=""
+                cov_directive="SKIP"
+            else
+                if [ ! -d "$dir" ]; then
+                    continue
+                fi
+                cov_directive="TODO"
+                make_cov_opt="-C $dir"
+            fi
+            echo Working on $dir
+
+            cov_proj="cov_$(basename $dir)"
+            set +eE
+            make $make_cov_opt $make_opt clean 2>&1 > /dev/null
+            test_cov $cov_build_dir $cov_proj "make $make_cov_opt $make_opt all" $cov_directive
+            set -eE
+        done
+        if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
+            echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
+            if [ "$jenkins_test_comments" = "yes" ]; then
+                gh pr $ghprbPullId --comment "$(cat $gh_cov_msg)"
+            fi
+        fi
+        popd
+    fi
+fi
+
+cd $WORKSPACE
 if [ "$jenkins_test_src_rpm" = "yes" ]; then
+    echo "Checking for rpm ..."
 
     # check distclean
     make $make_opt distclean 
     $autogen_script 
-    echo ./configure --prefix=$PMIX_HOME $configure_args | bash -xeE || exit 11
+    echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE || exit 11
 
     if [ -x /usr/bin/dpkg-buildpackage ]; then
         echo "Do not support PMIX on debian"
@@ -214,19 +255,22 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
 
         echo "Building PMIX bin.rpm"
         rpm_flags="--define 'mflags -j8' --define '_source_filedigest_algorithm md5' --define '_binary_filedigest_algorithm md5'"
-        (cd ./contrib/ && env rpmbuild_options="$rpm_flags" rpmtopdir=$topdir ./buildrpm.sh $tarball_src)
+        (cd ./contrib/ && env rpmbuild_options="$rpm_flags" rpmtopdir=$rpm_dir ./buildrpm.sh $tarball_src)
     fi
 fi
 
 #
 # JENKINS_RUN_TESTS should be set in jenkins slave node to indicate that node can run tests
 #
-if [ -n "$JENKINS_RUN_TESTS" ]; then
+cd $WORKSPACE
+if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
+    echo "Checking for tests ..."
     
     run_tap=$WORKSPACE/run_test.tap
     exe_dir=$WORKSPACE/test
+    make $make_opt check || exit 12
     cd $exe_dir
-    (PATH=$PMIX_HOME/bin:$PATH LD_LIBRARY_PATH=$PMIX_HOME/lib:$LD_LIBRARY_PATH make -C $exe_dir all)
+#    (PATH=$pmix_dir/bin:$PATH LD_LIBRARY_PATH=$pmix_dir/lib:$LD_LIBRARY_PATH make -C $exe_dir check)
     rm -rf $run_tap
 
     echo "1..11" > $run_tap
@@ -280,23 +324,26 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
     check_result "resolve peers" $test_exec
 
     # run valgrind
-    set +e
-    module load tools/valgrind
-    vg_opt="--tool=memcheck --leak-check=full --error-exitcode=0 --trace-children=yes  --trace-children-skip=*/sed,*/collect2,*/gcc,*/cat,*/rm,*/ls --track-origins=yes --xml=yes --xml-file=valgrind%p.xml --fair-sched=try --gen-suppressions=all"
-    valgrind $vg_opt  ./pmix_test -n 4 --timeout 1000 --ns-dist 3:1 --fence "[db | 0:;1:3]"
+    if [ "$jenkins_test_vg" = "yes" ]; then 
+        set +e
+        module load tools/valgrind
 
-    valgrind $vg_opt  ./pmix_test -n 4 --timeout 1000 --job-fence -c
+        vg_opt="--tool=memcheck --leak-check=full --error-exitcode=0 --trace-children=yes  --trace-children-skip=*/sed,*/collect2,*/gcc,*/cat,*/rm,*/ls --track-origins=yes --xml=yes --xml-file=valgrind%p.xml --fair-sched=try --gen-suppressions=all"
 
-    valgrind $vg_opt  ./pmix_test -n 2 --timeout 1000 --test-publish
+        valgrind $vg_opt  ./pmix_test -n 4 --timeout 60 --ns-dist 3:1 --fence "[db | 0:;1:3]"
 
-    valgrind $vg_opt  ./pmix_test -n 2 --timeout 1000 --test-spawn
+        valgrind $vg_opt  ./pmix_test -n 4 --timeout 60 --job-fence -c
 
-    valgrind $vg_opt  ./pmix_test -n 2 --timeout 1000 --test-connect
+        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-publish
 
-    valgrind $vg_opt  ./pmix_test -n 5 --timeout 1000 --test-resolve-peers --ns-dist "1:2:2"
+        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-spawn
 
-    module unload tools/valgrind
-    set -e
-    
+        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-connect
+
+        valgrind $vg_opt  ./pmix_test -n 5 --timeout 60 --test-resolve-peers --ns-dist "1:2:2"
+
+        module unload tools/valgrind
+        set -e
+    fi
 fi
 
