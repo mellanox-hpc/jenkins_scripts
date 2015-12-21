@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
-int main(int argc, char **argv, char **env)
+
+extern char **environ;
+
+int main(int argc, char **argv)
 {
     int i=0;
     char *astr;
     MPI_Init(&argc,&argv);
-    astr=env[i];
+    astr=environ[i];
     while(astr) {
         printf("%s\n",astr);
-        astr=env[++i];
+        astr=environ[++i];
     }
    MPI_Finalize();
 }
