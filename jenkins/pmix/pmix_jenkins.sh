@@ -145,7 +145,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     echo "Checking for build ..."
 
     cd ${WORKSPACE}/${prefix}
-    wget http://sourceforge.net/projects/levent/files/libevent/libevent-2.0/libevent-2.0.22-stable.tar.gz
+    wget http://sourceforge.net/projects/levent/files/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz
     tar zxf libevent-2.0.22-stable.tar.gz
     cd libevent-2.0.22-stable
     libevent_dir=$PWD/install

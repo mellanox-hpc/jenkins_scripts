@@ -244,7 +244,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     echo "Building pmix library"
 
     cd $TMP_DIR
-    wget http://sourceforge.net/projects/levent/files/libevent/libevent-2.0/libevent-2.0.22-stable.tar.gz
+    wget http://sourceforge.net/projects/levent/files/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz
     tar zxf libevent-2.0.22-stable.tar.gz
     cd libevent-2.0.22-stable
     LIBEVENT_DIR=$PWD/install
@@ -253,6 +253,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     cd $TMP_DIR
     git clone https://github.com/pmix/master.git pmix
     cd pmix
+
     PMIX_DIR=$PWD/install
     if [ -x "autogen.sh" ]; then
         autogen_script=./autogen.sh
