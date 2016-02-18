@@ -19,6 +19,7 @@ jenkins_test_slurm=${jenkins_test_slurm:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
 jenkins_test_ucx=${jenkins_test_ucx:="no"}
 jenkins_test_vg=${jenkins_test_vg:="yes"}
+jenkins_test_xrc=${jenkins_test_xrc:="yes"}
 
 if [ -n "$EXECUTOR_NUMBER" ]; then
     AFFINITY="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
@@ -200,6 +201,9 @@ function mpi_runner()
 
             if [ "$btl_openib" == "yes" ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib ${exe_path} ${exe_args}
+                if [ "$jenkins_test_xrc" = "yes" ] ; then
+                    $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
+                fi
             fi
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ucx ${exe_path} ${exe_args}
