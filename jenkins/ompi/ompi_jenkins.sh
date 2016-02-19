@@ -19,7 +19,7 @@ jenkins_test_slurm=${jenkins_test_slurm:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
 jenkins_test_ucx=${jenkins_test_ucx:="no"}
 jenkins_test_vg=${jenkins_test_vg:="yes"}
-jenkins_test_xrc=${jenkins_test_xrc:="yes"}
+jenkins_test_xrc=${jenkins_test_xrc:="no"}
 
 if [ -n "$EXECUTOR_NUMBER" ]; then
     AFFINITY="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
