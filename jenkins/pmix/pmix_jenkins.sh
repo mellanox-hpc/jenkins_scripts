@@ -3,16 +3,15 @@ export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
 rel_path=$(dirname $0)
 abs_path=$(readlink -f $rel_path)
-source $abs_path/../functions.sh
 
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_check=${jenkins_test_check:="yes"}
 jenkins_test_src_rpm=${jenkins_test_src_rpm:="yes"}
 jenkins_test_cov=${jenkins_test_cov:="yes"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
-jenkins_test_vg=${jenkins_test_vg:="yes"}
+jenkins_test_vg=${jenkins_test_vg:="no"}
 
-timeout_exe=${timout_exe:="timeout -s SIGKILL 10m"}
+timeout_exe=${timout_exe:="timeout -s SIGKILL 1m"}
 
 # prepare to run from command line w/o jenkins
 if [ -z "$WORKSPACE" ]; then
@@ -24,11 +23,14 @@ if [ -z "$WORKSPACE" ]; then
 fi
 
 prefix=jenkins
+rm -rf ${WORKSPACE}/${prefix}
 mkdir -p ${WORKSPACE}/${prefix}
 pmix_dir=${WORKSPACE}/${prefix}/install
 build_dir=${WORKSPACE}/${prefix}/build
 rpm_dir=${WORKSPACE}/${prefix}/rpms
+cov_dir=${WORKSPACE}/${prefix}/cov
 tarball_dir=${WORKSPACE}/${prefix}/tarball
+
 
 make_opt="-j$(nproc)"
 
@@ -57,6 +59,50 @@ function check_commands
             eval "jenkins_test_${pat}=yes"
         done
     fi
+}
+
+function test_cov
+{
+    local cov_root_dir=$1
+    local cov_proj=$2
+    local cov_make_cmd=$3
+    local cov_directive=$4
+
+    local nerrors=0;
+
+    module load tools/cov
+
+    local cov_build_dir=$cov_dir/$cov_proj
+
+    rm -rf $cov_build_dir
+    cov-build   --dir $cov_build_dir $cov_make_cmd
+
+    for excl in $cov_exclude_file_list; do
+        cov-manage-emit --dir $cov_build_dir --tu-pattern "file('$excl')" delete
+    done
+
+    cov-analyze --dir $cov_build_dir
+    nerrors=$(cov-format-errors --dir $cov_build_dir | awk '/Processing [0-9]+ errors?/ { print $2 }')
+
+    index_html=$(cd $cov_build_dir && find . -name index.html | cut -c 3-)
+
+    if [ -n "$nerrors" ]; then
+        if [ "$nerrors" = "0" ]; then
+            echo ok - coverity found no issues for $cov_proj >> $cov_stat_tap
+        else
+            echo "not ok - coverity detected $nerrors failures in $cov_proj # $cov_directive" >> $cov_stat_tap
+            local cov_proj_disp="$(echo $cov_proj|cut -f1 -d_)"
+            echo "" >> $gh_cov_msg
+            echo "* Coverity found $nerrors errors for ${cov_proj_disp}" >> $gh_cov_msg
+            echo "<li><a href=${cov_proj}/output/errors/index.html>Report for ${cov_proj}</a>" >> $cov_dir/index.html
+        fi
+    else
+        echo "not ok - coverity failed to run for $cov_proj # SKIP failed to init coverity" >> $cov_stat_tap
+    fi
+
+    module unload tools/cov
+
+    return $nerrors
 }
 
 # check for jenkins commands in PR title
@@ -124,7 +170,7 @@ function on_exit
 function check_result()
 {
     set +e
-    eval $2
+    eval $timeout_exe $2
     ret=$?
     set -e
     if [ $ret -gt 0 ]; then
@@ -145,7 +191,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     echo "Checking for build ..."
 
     cd ${WORKSPACE}/${prefix}
-    wget http://sourceforge.net/projects/levent/files/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz
+    wget http://downloads.sourceforge.net/levent/libevent-2.0.22-stable.tar.gz
     tar zxf libevent-2.0.22-stable.tar.gz
     cd libevent-2.0.22-stable
     libevent_dir=$PWD/install
@@ -158,7 +204,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
         autogen_script=./autogen.pl
     fi
 
-    configure_args=--with-libevent=$libevent_dir
+    configure_args="--with-libevent=$libevent_dir"
 
     # build pmix
     $autogen_script 
@@ -267,38 +313,41 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
     echo "Checking for tests ..."
     
     run_tap=$WORKSPACE/run_test.tap
-    exe_dir=$WORKSPACE/test
-    make $make_opt check || exit 12
-    cd $exe_dir
-#    (PATH=$pmix_dir/bin:$PATH LD_LIBRARY_PATH=$pmix_dir/lib:$LD_LIBRARY_PATH make -C $exe_dir check)
     rm -rf $run_tap
+
+    # build pmix
+    $autogen_script 
+    echo ./configure --prefix=$pmix_dir $configure_args --disable-visibility | bash -xeE
+    make $make_opt install
+
+    cd $WORKSPACE/test
 
     echo "1..11" > $run_tap
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]"'
-    check_result "blocking fence w/ data all" $test_exec
+    check_result "blocking fence w/ data all" "$test_exec"
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]"'
-    check_result "blocking fence w/ data all" $test_exec
+    check_result "blocking fence w/ data all" "$test_exec"
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]"'
-    check_result "blocking fence w/ data all" $test_exec
+    check_result "blocking fence w/ data all" "$test_exec"
 
     # 1 non-blocking fence without data exchange among processes from the 1st namespace
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[0:]"'
-    check_result "non-blocking fence w/o data" $test_exec
+    check_result "non-blocking fence w/o data" "$test_exec"
 
     # blocking fence without data exchange among processes from the 1st namespace
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[b | 0:]"'
-    check_result "blocking fence w/ data" $test_exec
+    check_result "blocking fence w/ data" "$test_exec"
 
     # non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[d | 0:]" --noise "[0:0,1]"'
-    check_result "non-blocking fence w/ data" $test_exec
+    check_result "non-blocking fence w/ data" "$test_exec"
 
     # blocking fence with data exchange across processes from the same namespace.
     test_exec='./pmix_test -n 4 --job-fence -c'
-    check_result "blocking fence w/ data on the same nspace" $test_exec
+    check_result "blocking fence w/ data on the same nspace" "$test_exec"
 
     # 3 fences: 1 - non-blocking without data exchange across processes from ns 0,
     # 2 - non-blocking across processes 0 and 1 from ns 0 and process 3 from ns 1,
@@ -309,19 +358,19 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
 
     # test publish/lookup/unpublish functionality.
     test_exec='./pmix_test -n 2 --test-publish'
-    check_result "publish" $test_exec
+    check_result "publish" "$test_exec"
 
     # test spawn functionality.
     test_exec='./pmix_test -n 2 --test-spawn'
-    check_result "spawn" $test_exec
+    check_result "spawn" "$test_exec"
 
     # test connect/disconnect between processes from the same namespace.
     test_exec='./pmix_test -n 2 --test-connect'
-    check_result "connect" $test_exec
+    check_result "connect" "$test_exec"
 
     # resolve peers from different namespaces.
     test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2"'
-    check_result "resolve peers" $test_exec
+    check_result "resolve peers" "$test_exec"
 
     # run valgrind
     if [ "$jenkins_test_vg" = "yes" ]; then 
