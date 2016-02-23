@@ -370,12 +370,9 @@ function test_tune()
         fi
 
         # check amca param
-        echo "check setting mca_base_env_list in amca file"
         echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
-        output=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $abs_path/env_mpi)
-        val=$(echo ${output} | grep ^XXX_ | wc -l)
+        val=$($OMPI_HOME/bin/mpirun -np 2 -am $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
         if [ $val -ne 10 ]; then
-            echo "amca file test failed. file contents: $(cat $WORKSPACE/test_amca.conf)"
             exit 1
         fi
     fi
