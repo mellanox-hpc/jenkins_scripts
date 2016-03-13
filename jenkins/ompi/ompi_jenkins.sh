@@ -17,7 +17,7 @@ jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
 jenkins_test_slurm=${jenkins_test_slurm:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
-jenkins_test_ucx=${jenkins_test_ucx:="no"}
+jenkins_test_ucx=${jenkins_test_ucx:="yes"}
 jenkins_test_vg=${jenkins_test_vg:="yes"}
 jenkins_test_xrc=${jenkins_test_xrc:="yes"}
 
@@ -25,6 +25,10 @@ if [ -n "$EXECUTOR_NUMBER" ]; then
     AFFINITY="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
 else
     AFFINITY=""
+fi
+
+if [ ! -d "ompi/mca/pml/ucx" ]; then
+    jenkins_test_ucx="no"
 fi
 
 timeout_exe=${timout_exe:="$AFFINITY timeout -s SIGSEGV 10m"}
@@ -106,21 +110,29 @@ function check_commands
 
 
 if [ "$jenkins_test_debug" = "no" ]; then
-    if [ $ghprbTargetBranch == "mellanox-v1.8" ]; then
         jenkins_test_threads=yes
         jenkins_test_oshmem=yes
         jenkins_test_help_txt=yes
         jenkins_test_src_rpm=yes
         jenkins_test_cov=yes
         jenkins_test_comments="yes"
-    fi
-
-    if [ $ghprbTargetBranch == "v1.8" ]; then
-        jenkins_test_threads=yes
-        jenkins_test_oshmem=yes
-        jenkins_test_src_rpm=yes
         mlnx_cov="SKIP"
-    fi
+    else
+        jenkins_test_build=yes
+        jenkins_test_examples=yes
+        jenkins_test_oshmem=yes
+        jenkins_test_ucx=yes
+        jenkins_test_vg=yes
+        jenkins_test_vader=no
+        jenkins_test_check=no
+        jenkins_test_src_rpm=no
+        jenkins_test_help_txt=no
+        jenkins_test_threads=
+        jenkins_test_cov=no
+        jenkins_test_known_issues=no
+        jenkins_test_all=no
+        jenkins_test_slurm=no
+        jenkins_test_comments=no
 fi
 
 if [ -n "$NOJENKINS" -a -d $OMPI_HOME1 ]; then
@@ -227,6 +239,7 @@ function oshmem_runner()
     local exe_args=${3}
     local spml_yoda="--mca spml yoda"
     local spml_ikrit="--mca spml ikrit"
+    local spml_ucx="--mca spml ucx"
     local oshrun="$OMPI_HOME/bin/oshrun"
 
     oshmem_info -a -l 9
@@ -255,7 +268,7 @@ function oshmem_runner()
             $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla                       ${exe_path} ${exe_args}
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
-                $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml ucx                     ${exe_path} ${exe_args}
+                $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx                       ${exe_path} ${exe_args}
             fi
 
             if [ -n "$oshmem_custom_args" ]; then
@@ -503,6 +516,11 @@ if [ "$jenkins_test_build" = "yes" ]; then
 
     configure_args="--with-platform=contrib/platform/mellanox/optimized --with-ompi-param-check --enable-picky $extra_conf"
 
+    if [ "$jenkins_test_ucx" = "yes" ]; then
+        module load mlnx-hpc-latest/gcc/stack
+        export ucx_dir=$UCX_DIR
+    fi
+
     rm -rf $ompi_home_list 
 
     # build ompi
@@ -697,17 +715,25 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             module load mlnx-hpc-latest/gcc/stack
 
             exe_dir=$OMPI_HOME/examples
-            vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3 --track-origins=yes"
+            vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3 --track-origins=yes -q"
             mpi_opt="-mca coll ^hcoll -np 1"
 
             mpi_exe=$OMPI_HOME/examples/hello_c
             shmem_exe=$OMPI_HOME/examples/oshmem_shmalloc
             shmem_puts_exe=$OMPI_HOME/examples/oshmem_strided_puts
 
-            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpirun $mpi_opt -mca pml ob1   -mca btl self,sm valgrind $vg_opt $mpi_exe
-            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml yoda -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
+            PATH=$OMPI_HOME/bin:$PATH
+            LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH
 
-            PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
+            mpirun=$OMPI_HOME/bin/mpirun
+            oshrun=$OMPI_HOME/bin/oshrun
+
+	    UCX_VG="$UCX_DIR/debug/lib/libucp.so:$UCX_DIR/debug/lib/libucm.so:$UCX_DIR/debug/lib/libucs.so:$UCX_DIR/debug/lib/libuct.so"
+
+            $mpirun $mpi_opt -mca pml ob1    -mca btl self,sm valgrind $vg_opt $mpi_exe
+            $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
+            $oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
+            $oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
 
             module unload dev/mofed_valgrind
             module unload tools/valgrind
