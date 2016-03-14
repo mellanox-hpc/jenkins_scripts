@@ -113,7 +113,6 @@ if [ "$jenkins_test_debug" = "no" ]; then
         jenkins_test_threads=yes
         jenkins_test_oshmem=yes
         jenkins_test_src_rpm=yes
-        jenkins_test_comments="yes"
         mlnx_cov="SKIP"
     else
         jenkins_test_build=yes
