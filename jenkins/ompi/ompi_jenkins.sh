@@ -206,7 +206,7 @@ function mpi_runner()
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca"
+            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca -x UCX_TLS=rc,cm"
 
             echo "Running $exe_path ${exe_args}"
 
@@ -258,7 +258,7 @@ function oshmem_runner()
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
             mca="$common_mca"
-            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca"
+            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca -x UCX_TLS=rc,cm"
             mca="$mca --mca rmaps_base_dist_hca $hca --mca sshmem_verbs_hca_name $hca"
             echo "Running $exe_path ${exe_args}"
             $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${exe_path} ${exe_args}
@@ -267,7 +267,7 @@ function oshmem_runner()
             $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla                       ${exe_path} ${exe_args}
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
-                $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx                       ${exe_path} ${exe_args}
+                $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx ${exe_path} ${exe_args}
             fi
 
             if [ -n "$oshmem_custom_args" ]; then
@@ -732,7 +732,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             $mpirun $mpi_opt -mca pml ob1    -mca btl self,sm valgrind $vg_opt $mpi_exe
             $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
             $oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
-            $oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
+            $oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_TLS=rc,cm -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
 
             module unload dev/mofed_valgrind
             module unload tools/valgrind
