@@ -206,7 +206,7 @@ function mpi_runner()
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca -x UCX_TLS=rc,cm"
+            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca -x UCX_TLS=rc,cm"
 
             echo "Running $exe_path ${exe_args}"
 
@@ -258,7 +258,7 @@ function oshmem_runner()
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
             mca="$common_mca"
-            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_DEVICES=$hca -x UCX_TLS=rc,cm"
+            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca -x UCX_TLS=rc,cm"
             mca="$mca --mca rmaps_base_dist_hca $hca --mca sshmem_verbs_hca_name $hca"
             echo "Running $exe_path ${exe_args}"
             $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${exe_path} ${exe_args}
