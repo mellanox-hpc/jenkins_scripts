@@ -215,7 +215,7 @@ function mpi_runner()
                     $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
                 fi
             fi
-            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
+            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0"]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ucx ${exe_path} ${exe_args}
             fi
             if [ $has_yalla -gt 0 ]; then
@@ -265,7 +265,7 @@ function oshmem_runner()
             $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml cm  -mca mtl mxm            ${exe_path} ${exe_args}
             $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla                       ${exe_path} ${exe_args}
 
-            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 ]; then
+            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
                 $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx ${exe_path} ${exe_args}
             fi
 
@@ -731,7 +731,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             $mpirun $mpi_opt -mca pml ob1    -mca btl self,sm valgrind $vg_opt $mpi_exe
             $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
             $oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
-            $oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_TLS=rc,cm -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
+            $oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_TLS=rc,cm -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
 
             module unload dev/mofed_valgrind
             module unload tools/valgrind
