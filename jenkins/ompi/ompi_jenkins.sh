@@ -730,7 +730,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             $mpirun $mpi_opt -mca pml ob1    -mca btl self,sm valgrind $vg_opt $mpi_exe
             $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
             $oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
-            $oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_TLS=rc,cm -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
+            #$oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_TLS=rc,cm -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
 
             module unload dev/mofed_valgrind
             module unload tools/valgrind
