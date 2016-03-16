@@ -691,6 +691,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 btl_openib=no
             fi
             btl_sm=no
+	    jenkins_test_ucx_bak=$jenkins_test_ucx
+	    jenkins_test_ucx=no
             for exe in overlap latency; do 
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 4 $exe_path 8)
@@ -699,6 +701,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 2 $exe_path 8)
             done
+	    jenkins_test_ucx=$jenkins_test_ucx_bak
             btl_openib=yes
             btl_tcp=yes
             btl_sm=yes
