@@ -750,7 +750,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
     # todo: make dir structure with shell scripts to run as jenkins tests at the end
     for OMPI_HOME in $(echo $ompi_home_list); do
         test_tune
-        test_mindist
+#test_mindist
     done
 fi
 
