@@ -17,7 +17,7 @@ jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
 jenkins_test_slurm=${jenkins_test_slurm:="no"}
 jenkins_test_comments=${jenkins_test_comments:="no"}
-jenkins_test_ucx=${jenkins_test_ucx:="yes"}
+jenkins_test_ucx=${jenkins_test_ucx:="no"}
 jenkins_test_vg=${jenkins_test_vg:="yes"}
 jenkins_test_xrc=${jenkins_test_xrc:="yes"}
 
