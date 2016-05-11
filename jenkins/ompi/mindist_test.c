@@ -92,6 +92,7 @@ int main(int argc, char* argv[])
     policy = getenv("OMPI_MCA_rmaps_base_mapping_policy");
     dist_hca = getenv("OMPI_MCA_rmaps_dist_device");
     if (NULL != dist_hca) {
+        dist_hca = strdup(dist_hca);
         if (NULL != (pch = strchr(dist_hca, ':'))) {
             *pch = '\0';
         }
