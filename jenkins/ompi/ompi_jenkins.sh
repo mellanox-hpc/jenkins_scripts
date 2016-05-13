@@ -214,7 +214,7 @@ function mpi_runner()
                     $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
                 fi
             fi
-            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0"]; then
+            if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ucx ${exe_path} ${exe_args}
             fi
             if [ $has_yalla -gt 0 ]; then
