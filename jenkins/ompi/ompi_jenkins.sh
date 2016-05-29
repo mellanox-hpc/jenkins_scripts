@@ -182,8 +182,14 @@ function mpi_runner()
     local exe_path=$2
     local exe_args=${3}
     local common_mca="-bind-to core"
-    local mca="$common_mca"
     local mpirun="$OMPI_HOME/bin/mpirun"
+
+    local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
+    if [ $has_timeout -gt 0 ]; then
+	    timeout_exe=""
+	    common_mca="$common_mca -get-stack-traces -timeout 300"
+    fi
+    local mca="$common_mca"
 
     if [ "$btl_tcp" == "yes" ]; then
         $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
@@ -198,8 +204,8 @@ function mpi_runner()
     fi
 
 
-    local has_yalla=$(ompi_info --param pml all --level 9 | grep yalla | wc -l)
-    local has_ucx=$(ompi_info --param pml all --level 9 | grep ucx | wc -l)
+    local has_yalla=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep yalla | wc -l)
+    local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
     for hca_dev in $(ibstat -l); do
 
         if [ -f "$exe_path" ]; then
@@ -238,10 +244,18 @@ function oshmem_runner()
     local spml_ikrit="--mca spml ikrit"
     local spml_ucx="--mca spml ucx"
     local oshrun="$OMPI_HOME/bin/oshrun"
-
-    oshmem_info -a -l 9
     local common_mca="--bind-to core -x SHMEM_SYMMETRIC_HEAP_SIZE=1024M"
+
+    local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
+    local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
+    if [ $has_timeout -gt 0 ]; then
+	    timeout_exe=""
+	    common_mca="$common_mca -get-stack-traces -timeout 300"
+    fi
+
     local mca="$common_mca"
+
+    $OMPI_HOME/bin/oshmem_info -a -l 9
 
     $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
     $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm    ${exe_path} ${exe_args}
@@ -250,7 +264,6 @@ function oshmem_runner()
         $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,vader ${exe_path} ${exe_args}
     fi
 
-    local has_ucx=$(ompi_info --param pml all --level 9 | grep ucx | wc -l)
 
     for hca_dev in $(ibstat -l); do
         if [ -f "$exe_path" ]; then
