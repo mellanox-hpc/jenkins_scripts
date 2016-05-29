@@ -32,6 +32,7 @@ if [ ! -d "ompi/mca/pml/ucx" ]; then
 fi
 
 timeout_exe=${timout_exe:="$AFFINITY timeout -s SIGSEGV 10m"}
+mpi_timeout="--report-state-on-timeout --get-stack-traces --timeout 300"
 
 # internal flags to select/unselect OMPI transports used in test
 btl_tcp=${btl_tcp:="yes"}
@@ -187,7 +188,7 @@ function mpi_runner()
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
     if [ $has_timeout -gt 0 ]; then
 	    timeout_exe=""
-	    common_mca="$common_mca -get-stack-traces -timeout 300"
+	    common_mca="$common_mca $mpi_timeout"
     fi
     local mca="$common_mca"
 
@@ -250,7 +251,7 @@ function oshmem_runner()
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
     if [ $has_timeout -gt 0 ]; then
 	    timeout_exe=""
-	    common_mca="$common_mca -get-stack-traces -timeout 300"
+	    common_mca="$common_mca $mpi_timeout"
     fi
 
     local mca="$common_mca"
