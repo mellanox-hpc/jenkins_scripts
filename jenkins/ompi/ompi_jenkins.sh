@@ -32,7 +32,7 @@ if [ ! -d "ompi/mca/pml/ucx" ]; then
 fi
 
 timeout_exe=${timout_exe:="$AFFINITY timeout -s SIGSEGV 10m"}
-mpi_timeout="--report-state-on-timeout --get-stack-traces --timeout 300"
+mpi_timeout="--report-state-on-timeout --get-stack-traces --timeout 600"
 
 # internal flags to select/unselect OMPI transports used in test
 btl_tcp=${btl_tcp:="yes"}
