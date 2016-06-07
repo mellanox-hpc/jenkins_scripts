@@ -223,7 +223,8 @@ function mpi_runner()
             fi
 
 	    if [ "$hca_dev" = "mlx4_0" ]; then
-                $timeout_exe $mpirun -np $np $common_mca -mca btl_openib_cpc_include rdmacm -mca pml ob1 -mca btl self,openib -mca btl_if_include ${hca_dev}:2 ${exe_path} ${exe_args}
+		rdma_opt="-mca btl_openib_receive_queues P,65536,256,192,128:S,128,256,192,128:S,2048,1024,1008,64:S,12288,1024,1008,64:S,65536,1024,1008,64"
+                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ob1 -mca btl self,openib -mca btl_if_include ${hca_dev}:2 ${exe_path} ${exe_args}
 	    fi
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
