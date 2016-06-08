@@ -736,7 +736,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             exe_dir=$OMPI_HOME/examples
             vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3 --track-origins=yes -q"
-            mpi_opt="-mca coll ^hcoll -np 1 -x MXM_TLS=self,shm"
+            mpi_opt="-mca coll ^hcoll -np 1 -x MXM_RDMA_PORTS=mlx5_0:1"
 
             mpi_exe=$OMPI_HOME/examples/hello_c
             shmem_exe=$OMPI_HOME/examples/oshmem_shmalloc
