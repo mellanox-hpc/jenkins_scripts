@@ -224,7 +224,7 @@ function mpi_runner()
 
 	    if [ "$hca_dev" = "mlx4_0" ]; then
 		rdma_opt="-mca btl_openib_receive_queues P,65536,256,192,128:S,128,256,192,128:S,2048,1024,1008,64:S,12288,1024,1008,64:S,65536,1024,1008,64"
-                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ob1 -mca btl self,openib -mca btl_if_include ${hca_dev}:2 ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ^ucx -mca btl self,openib -mca btl_if_include ${hca_dev}:2 ${exe_path} ${exe_args}
 	    fi
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
@@ -736,7 +736,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             exe_dir=$OMPI_HOME/examples
             vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3 --track-origins=yes -q"
-            mpi_opt="-mca coll ^hcoll -np 1 -x MXM_RDMA_PORTS=shm,self"
+            mpi_opt="-mca coll ^hcoll -np 1 -x MXM_TLS=self,shm"
 
             mpi_exe=$OMPI_HOME/examples/hello_c
             shmem_exe=$OMPI_HOME/examples/oshmem_shmalloc
