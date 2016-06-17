@@ -216,9 +216,9 @@ function mpi_runner()
             echo "Running $exe_path ${exe_args}"
 
             if [ "$btl_openib" == "yes" ]; then
-                $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca pml ^ucx -mca btl self,openib ${exe_path} ${exe_args}
                 if [ "$jenkins_test_xrc" = "yes" ] ; then
-                    $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
+                    $timeout_exe $mpirun -np $np $mca -mca pml ^ucx -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
                 fi
             fi
 
