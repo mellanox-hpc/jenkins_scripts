@@ -216,15 +216,15 @@ function mpi_runner()
             echo "Running $exe_path ${exe_args}"
 
             if [ "$btl_openib" == "yes" ]; then
-                $timeout_exe $mpirun -np $np $mca -mca pml ^ucx -mca btl self,openib ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib ${exe_path} ${exe_args}
                 if [ "$jenkins_test_xrc" = "yes" ] ; then
-                    $timeout_exe $mpirun -np $np $mca -mca pml ^ucx -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
+                    $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 ${exe_path} ${exe_args}
                 fi
             fi
 
 	    if [ "$hca_dev" = "mlx4_0" ]; then
 		rdma_opt="-mca btl_openib_receive_queues P,65536,256,192,128:S,128,256,192,128:S,2048,1024,1008,64:S,12288,1024,1008,64:S,65536,1024,1008,64"
-                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ^ucx -mca btl self,openib -mca btl_if_include ${hca_dev}:2 ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ob1 -mca btl self,openib -mca btl_if_include ${hca_dev}:2 ${exe_path} ${exe_args}
 	    fi
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
