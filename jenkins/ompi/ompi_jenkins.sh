@@ -180,7 +180,7 @@ fi
 function mpi_runner()
 {
     local np=$1
-    local exe_path=$2
+    local exe_path="${AFFINITY} $2"
     local exe_args=${3}
     local common_mca="-bind-to core"
     local mpirun="$OMPI_HOME/bin/mpirun"
@@ -193,11 +193,11 @@ function mpi_runner()
     local mca="$common_mca"
 
     if [ "$btl_tcp" == "yes" ]; then
-        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,tcp   ${exe_path} ${exe_args}
+        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,tcp ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_sm" == "yes" ]; then
-        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,sm    ${exe_path} ${exe_args}
+        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,sm ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_vader" == "yes" ]; then
@@ -245,7 +245,7 @@ function mpi_runner()
 function oshmem_runner()
 {
     local np=$1
-    local exe_path=$2
+    local exe_path="${AFFINITY} $2"
     local exe_args=${3}
     local spml_yoda="--mca spml yoda"
     local spml_ikrit="--mca spml ikrit"
@@ -298,7 +298,7 @@ function oshmem_runner()
 function slurm_runner()
 {
     local np=$1
-    local exe_path=$2
+    local exe_path="${AFFINITY} $2"
     local exe_args=${3}
 
 	command -v srun >/dev/null 2>&1 || { echo "srun is not found."; exit 1; }
