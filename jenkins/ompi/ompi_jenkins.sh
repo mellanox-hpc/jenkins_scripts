@@ -223,11 +223,11 @@ function mpi_runner()
                 fi
             fi
 
-            if [ "$hca_dev" = "mlx4_0" ]; then
-                rdma_opt="-mca btl_openib_receive_queues P,65536,256,192,128:S,128,256,192,128:S,2048,1024,1008,64:S,12288,1024,1008,64:S,65536,1024,1008,64"
-                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ob1 -mca btl self,openib -mca btl_openib_if_include ${hca_dev}:2 \
-                ${AFFINITY} ${exe_path} ${exe_args}
-            fi
+#if [ "$hca_dev" = "mlx4_0" ]; then
+#                rdma_opt="-mca btl_openib_receive_queues P,65536,256,192,128:S,128,256,192,128:S,2048,1024,1008,64:S,12288,1024,1008,64:S,65536,1024,1008,64"
+#                $timeout_exe $mpirun -np $np $common_mca $rdma_opt -mca btl_openib_cpc_include rdmacm -mca pml ob1 -mca btl self,openib -mca btl_openib_if_include ${hca_dev}:2 \
+#                ${AFFINITY} ${exe_path} ${exe_args}
+#            fi
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ucx ${AFFINITY} ${exe_path} ${exe_args}
