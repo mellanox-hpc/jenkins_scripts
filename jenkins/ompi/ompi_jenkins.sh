@@ -182,7 +182,7 @@ function mpi_runner()
     local np=$1
     local exe_path="$2"
     local exe_args=${3}
-    local common_mca="-bind-to core"
+    local common_mca="-bind-to none"
     local mpirun="$OMPI_HOME/bin/mpirun"
 
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
