@@ -745,7 +745,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             done
             for exe in latency_th bw_th message_rate_th; do 
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
-                (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 2 $exe_path 8)
+                (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 2 $exe_path 4)
             done
 	    jenkins_test_ucx=$jenkins_test_ucx_bak
             btl_openib=yes
