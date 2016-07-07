@@ -22,16 +22,16 @@ jenkins_test_vg=${jenkins_test_vg:="yes"}
 jenkins_test_xrc=${jenkins_test_xrc:="yes"}
 
 if [ -n "$EXECUTOR_NUMBER" ]; then
-    AFFINITY="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
+    AFFINITY_GLOB="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
 else
-    AFFINITY=""
+    AFFINITY_GLOB=""
 fi
 
 if [ ! -d "ompi/mca/pml/ucx" ]; then
     jenkins_test_ucx="no"
 fi
 
-timeout_exe=${timout_exe:="$AFFINITY timeout -s SIGSEGV 10m"}
+timeout_exe=${timout_exe:="$AFFINITY_GLOB timeout -s SIGSEGV 10m"}
 mpi_timeout="--report-state-on-timeout --get-stack-traces --timeout 600"
 
 # internal flags to select/unselect OMPI transports used in test
@@ -179,11 +179,18 @@ fi
 
 function mpi_runner()
 {
+    AFFINITY=${AFFINITY_GLOB}
+    if [ "$1" = "--no-bind" ]; then
+        AFFINITY=""
+        shift
+    fi
+
     local np=$1
     local exe_path="$2"
     local exe_args=${3}
     local common_mca="-bind-to none"
     local mpirun="$OMPI_HOME/bin/mpirun"
+    
 
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
     if [ $has_timeout -gt 0 ]; then
@@ -246,6 +253,13 @@ function mpi_runner()
 
 function oshmem_runner()
 {
+
+    AFFINITY=${AFFINITY_GLOB}
+    if [ "$1" = "--no-bind" ]; then
+        AFFINITY=""
+        shift
+    fi
+
     local np=$1
     local exe_path="$2"
     local exe_args=${3}
@@ -253,7 +267,7 @@ function oshmem_runner()
     local spml_ikrit="--mca spml ikrit"
     local spml_ucx="--mca spml ucx"
     local oshrun="$OMPI_HOME/bin/oshrun"
-    local common_mca="--bind-to core -x SHMEM_SYMMETRIC_HEAP_SIZE=1024M"
+    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=1024M"
 
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
@@ -299,6 +313,12 @@ function oshmem_runner()
 
 function slurm_runner()
 {
+    AFFINITY=${AFFINITY_GLOB}
+    if [ "$1" = "--no-bind" ]; then
+        AFFINITY=""
+        shift
+    fi
+
     local np=$1
     local exe_path="$2"
     local exe_args=${3}
@@ -316,8 +336,8 @@ function on_start()
 {
     echo Starting on host: $(hostname)
 
-    export distro_name=$(python -c 'import platform ; print platform.dist()[0]' | tr '[:upper:]' '[:lower:]')
-    export distro_ver=$(python  -c 'import platform ; print platform.dist()[1]' | tr '[:upper:]' '[:lower:]')
+    export distro_name=`python -c 'import platform ; print platform.dist()[0]' | tr '[:upper:]' '[:lower:]'`
+    export distro_ver=`python  -c 'import platform ; print platform.dist()[1]' | tr '[:upper:]' '[:lower:]'`
     if [ "$distro_name" == "suse" ]; then
         patch_level=$(egrep PATCHLEVEL /etc/SuSE-release|cut -f2 -d=|sed -e "s/ //g")
         if [ -n "$patch_level" ]; then
@@ -725,7 +745,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             done
             for exe in latency_th bw_th message_rate_th; do 
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
-                (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 2 $exe_path 8)
+                (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 2 $exe_path 4)
             done
 	    jenkins_test_ucx=$jenkins_test_ucx_bak
             btl_openib=yes
