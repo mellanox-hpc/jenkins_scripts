@@ -560,7 +560,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     configure_args="--with-platform=contrib/platform/mellanox/optimized --with-ompi-param-check --enable-picky $extra_conf"
 
     if [ "$jenkins_test_ucx" = "yes" ]; then
-        module load mlnx-hpc-latest/gcc/stack
+        module load hpcx-gcc-stack
         export ucx_dir=$UCX_DIR
     fi
 
@@ -758,7 +758,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             module load dev/mofed_valgrind
             module load tools/valgrind
-            module load mlnx-hpc-latest/gcc/stack
+            module load hpcx-gcc-stack
 
             exe_dir=$OMPI_HOME/examples
             vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3 --track-origins=yes -q"
@@ -783,7 +783,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             module unload dev/mofed_valgrind
             module unload tools/valgrind
-            module unload mlnx-hpc-latest/gcc/stack
+            module unload hpcx-gcc-stack
 
         fi
     done
