@@ -191,7 +191,7 @@ if [ "$jenkins_test_build" = "yes" ]; then
     echo "Checking for build ..."
 
     cd ${WORKSPACE}/${prefix}
-    curl -L https://github.com/libevent/libevent/releases/download/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz | tar -x
+    curl -L https://github.com/libevent/libevent/releases/download/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz | tar -xz
     cd libevent-2.0.22-stable
     libevent_dir=$PWD/install
     ./autogen.sh && ./configure --prefix=$libevent_dir && make && make install
