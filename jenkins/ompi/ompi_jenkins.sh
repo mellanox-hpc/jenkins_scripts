@@ -791,7 +791,11 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
     for mpit in $abs_path/*.c; do
         out_name=$(basename $mpit .c)
-        $OMPI_HOME/bin/mpicc -o  $abs_path/$out_name  $mpit
+        libs_add=""
+        if [ "$out_name" = "mindist_test" ]; then
+            libs_add=${libs_add}" -lnuma"
+        fi
+        $OMPI_HOME/bin/mpicc -o  $abs_path/$out_name  $mpit $libs_add
     done
 
     # todo: make dir structure with shell scripts to run as jenkins tests at the end
