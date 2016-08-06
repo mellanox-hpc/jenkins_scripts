@@ -501,7 +501,7 @@ function test_mindist()
     set +e
     if [ $val -gt 0 ]; then
         echo "test the dist mapping policy in $OMPI_HOME"
-        $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c
+        $OMPI_HOME/bin/mpicc -o  $abs_path/mindist_test  $abs_path/mindist_test.c -lnuma
         val=$($OMPI_HOME/bin/ompi_info --level 9 --param rmaps all | grep rmaps_dist_device | wc -l)
         if [ $val -gt 0 ]; then
             for hca_dev in $(ibstat -l); do
