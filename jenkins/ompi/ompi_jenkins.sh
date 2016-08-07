@@ -268,7 +268,7 @@ function oshmem_runner()
     local spml_ikrit="--mca spml ikrit"
     local spml_ucx="--mca spml ucx"
     local oshrun="$OMPI_HOME/bin/oshrun"
-    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=1024M"
+    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=256M"
 
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
