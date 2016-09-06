@@ -284,9 +284,9 @@ function oshmem_runner()
 #    $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,tcp ${AFFINITY} ${exe_path} ${exe_args}
 #    $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm ${AFFINITY} ${exe_path} ${exe_args}
 
-    if [ "$jenkins_test_vader" == "yes" ]; then
+#    if [ "$jenkins_test_vader" == "yes" ]; then
 #        $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,vader ${AFFINITY} ${exe_path} ${exe_args}
-    fi
+#    fi
 
 
     for hca_dev in $(ibstat -l); do
