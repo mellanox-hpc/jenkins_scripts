@@ -22,6 +22,16 @@ jenkins_test_ucx=${jenkins_test_ucx:="yes"}
 jenkins_test_vg="no"
 jenkins_test_xrc=${jenkins_test_xrc:="yes"}
 
+# Ensure that we will cleanup all temp files
+# even if the application will fail and won't
+# do that itself
+jenkins_session_base=`mktemp -d`
+function jenkins_cleanup {
+  rm -rf "$jenkins_session_base"
+}
+trap jenkins_cleanup EXIT
+export OMPI_MCA_orte_tmpdir_base=$jenkins_session_base
+
 if [ -n "$EXECUTOR_NUMBER" ]; then
     AFFINITY_GLOB="taskset -c $(( 2 * EXECUTOR_NUMBER ))","$(( 2 * EXECUTOR_NUMBER + 1))"
 else
@@ -189,7 +199,7 @@ function mpi_runner()
     local np=$1
     local exe_path="$2"
     local exe_args=${3}
-    local common_mca="-bind-to none"
+    local common_mca="-bind-to none -mca orte_tmpdir_base $jenkins_session_base"
     local mpirun="$OMPI_HOME/bin/mpirun"
     
 
@@ -268,7 +278,7 @@ function oshmem_runner()
     local spml_ikrit="--mca spml ikrit"
     local spml_ucx="--mca spml ucx"
     local oshrun="$OMPI_HOME/bin/oshrun"
-    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=256M"
+    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=256M -mca orte_tmpdir_base $jenkins_session_base"
 
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
