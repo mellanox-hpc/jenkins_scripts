@@ -730,7 +730,11 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 pushd .
                 mkdir -p $exe_dir
                 cd $exe_dir
-                wget --no-check-certificate http://www.mcs.anl.gov/~thakur/thread-tests/thread-tests-1.1.tar.gz
+
+                # Keep this test locally to avoid future connection problems
+                #wget --no-check-certificate http://www.mcs.anl.gov/~thakur/thread-tests/thread-tests-1.1.tar.gz
+                cp /hpc/local/mpitests/thread-tests-1.1.tar.gz .
+
                 tar zxf thread-tests-1.1.tar.gz
                 cd thread-tests-1.1
                 make CC=$OMPI_HOME/bin/mpicc
