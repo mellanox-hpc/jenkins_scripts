@@ -18,7 +18,7 @@ if [ -z "$WORKSPACE" ]; then
     WORKSPACE=$PWD
     JOB_URL=$WORKSPACE
     BUILD_NUMBER=1
-    JENKINS_RUN_TESTS=yes
+    JENKINS_RUN_TESTS=1
     NOJENKINS=${NOJENKINS:="yes"}
 fi
 
@@ -33,6 +33,8 @@ tarball_dir=${WORKSPACE}/${prefix}/tarball
 
 
 make_opt="-j$(nproc)"
+
+test_ret=0
 
 # extract jenkins commands from function args
 function check_commands
@@ -175,10 +177,89 @@ function check_result()
     set -e
     if [ $ret -gt 0 ]; then
         echo "not ok $test_id $1" >> $run_tap
+        test_ret=1
     else
         echo "ok $test_id $1" >> $run_tap
     fi
     test_id=$((test_id+1))
+}
+
+function pmix_run_tests()
+{
+    cd $WORKSPACE/test
+
+    echo "1..11" >> $run_tap
+
+    test_ret=0
+
+    test_id=1
+    # 1 blocking fence with data exchange among all processes from two namespaces:
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]"'
+    check_result "blocking fence w/ data all" "$test_exec"
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]"'
+    check_result "blocking fence w/ data all" "$test_exec"
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]"'
+    check_result "blocking fence w/ data all" "$test_exec"
+
+    # 1 non-blocking fence without data exchange among processes from the 1st namespace
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[0:]"'
+    check_result "non-blocking fence w/o data" "$test_exec"
+
+    # blocking fence without data exchange among processes from the 1st namespace
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[b | 0:]"'
+    check_result "blocking fence w/ data" "$test_exec"
+
+    # non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[d | 0:]" --noise "[0:0,1]"'
+    check_result "non-blocking fence w/ data" "$test_exec"
+
+    # blocking fence with data exchange across processes from the same namespace.
+    test_exec='./pmix_test -n 4 --job-fence -c'
+    check_result "blocking fence w/ data on the same nspace" "$test_exec"
+
+    # 3 fences: 1 - non-blocking without data exchange across processes from ns 0,
+    # 2 - non-blocking across processes 0 and 1 from ns 0 and process 3 from ns 1,
+    # 3 - blocking with data exchange across processes from their own namespace.
+#    Disabled as incorrect at the moment
+#    test_exec='./pmix_test -n 4 --job-fence -c --fence "[0:][d|0:0-1;1:]" --use-same-keys --ns-dist "3:1"'
+#    check_result "mix fence" $test_exec
+
+    # test publish/lookup/unpublish functionality.
+    test_exec='./pmix_test -n 2 --test-publish'
+    check_result "publish" "$test_exec"
+
+    # test spawn functionality.
+    test_exec='./pmix_test -n 2 --test-spawn'
+    check_result "spawn" "$test_exec"
+
+    # test connect/disconnect between processes from the same namespace.
+    test_exec='./pmix_test -n 2 --test-connect'
+    check_result "connect" "$test_exec"
+
+    # resolve peers from different namespaces.
+    test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2"'
+    check_result "resolve peers" "$test_exec"
+
+    # run valgrind
+    if [ "$jenkins_test_vg" = "yes" ]; then 
+        set +e
+        module load tools/valgrind
+        vg_opt="--tool=memcheck --leak-check=full --error-exitcode=0 --trace-children=yes  --trace-children-skip=*/sed,*/collect2,*/gcc,*/cat,*/rm,*/ls --track-origins=yes --xml=yes --xml-file=valgrind%p.xml --fair-sched=try --gen-suppressions=all"
+        valgrind $vg_opt  ./pmix_test -n 4 --timeout 60 --ns-dist 3:1 --fence "[db | 0:;1:3]"
+        valgrind $vg_opt  ./pmix_test -n 4 --timeout 60 --job-fence -c
+        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-publish
+        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-spawn
+        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-connect
+        valgrind $vg_opt  ./pmix_test -n 5 --timeout 60 --test-resolve-peers --ns-dist "1:2:2"
+        module unload tools/valgrind
+        set -e
+    fi
+
+    if [ "$test_ret" = "0" ]; then
+        echo "Test OK"
+    else
+        echo "Test failed"
+    fi
 }
 
 trap "on_exit" INT TERM ILL KILL FPE SEGV ALRM
@@ -309,89 +390,33 @@ fi
 #
 cd $WORKSPACE
 if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
-    echo "Checking for tests ..."
-    
     run_tap=$WORKSPACE/run_test.tap
     rm -rf $run_tap
 
     # build pmix
     $autogen_script 
-    echo ./configure --prefix=$pmix_dir $configure_args --disable-visibility | bash -xeE
+    echo ./configure --prefix=$pmix_dir $configure_args --disable-visibility --disable-dstore | bash -xeE
     make $make_opt install
 
-    cd $WORKSPACE/test
+    export TMPDIR="/tmp"
 
-    echo "1..11" > $run_tap
+    echo "Checking without dstor ..."
+    echo "Checking without dstor:" >> $run_tap
+    pmix_run_tests
+    rc=$test_ret
 
-    test_id=1
-    # 1 blocking fence with data exchange among all processes from two namespaces:
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]"'
-    check_result "blocking fence w/ data all" "$test_exec"
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]"'
-    check_result "blocking fence w/ data all" "$test_exec"
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]"'
-    check_result "blocking fence w/ data all" "$test_exec"
+    cd $WORKSPACE
+    echo ./configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
+    make $make_opt install
+    echo "Checking with dstor ..."
+    echo "Checking with dstor:" >> $run_tap
+    pmix_run_tests
 
-    # 1 non-blocking fence without data exchange among processes from the 1st namespace
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[0:]"'
-    check_result "non-blocking fence w/o data" "$test_exec"
+    rc=$((test_ret+rc))
 
-    # blocking fence without data exchange among processes from the 1st namespace
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[b | 0:]"'
-    check_result "blocking fence w/ data" "$test_exec"
+    unset TMPDIR
 
-    # non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[d | 0:]" --noise "[0:0,1]"'
-    check_result "non-blocking fence w/ data" "$test_exec"
+    exit $rc
 
-    # blocking fence with data exchange across processes from the same namespace.
-    test_exec='./pmix_test -n 4 --job-fence -c'
-    check_result "blocking fence w/ data on the same nspace" "$test_exec"
-
-    # 3 fences: 1 - non-blocking without data exchange across processes from ns 0,
-    # 2 - non-blocking across processes 0 and 1 from ns 0 and process 3 from ns 1,
-    # 3 - blocking with data exchange across processes from their own namespace.
-#    Disabled as incorrect at the moment
-#    test_exec='./pmix_test -n 4 --job-fence -c --fence "[0:][d|0:0-1;1:]" --use-same-keys --ns-dist "3:1"'
-#    check_result "mix fence" $test_exec
-
-    # test publish/lookup/unpublish functionality.
-    test_exec='./pmix_test -n 2 --test-publish'
-    check_result "publish" "$test_exec"
-
-    # test spawn functionality.
-    test_exec='./pmix_test -n 2 --test-spawn'
-    check_result "spawn" "$test_exec"
-
-    # test connect/disconnect between processes from the same namespace.
-    test_exec='./pmix_test -n 2 --test-connect'
-    check_result "connect" "$test_exec"
-
-    # resolve peers from different namespaces.
-    test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2"'
-    check_result "resolve peers" "$test_exec"
-
-    # run valgrind
-    if [ "$jenkins_test_vg" = "yes" ]; then 
-        set +e
-        module load tools/valgrind
-
-        vg_opt="--tool=memcheck --leak-check=full --error-exitcode=0 --trace-children=yes  --trace-children-skip=*/sed,*/collect2,*/gcc,*/cat,*/rm,*/ls --track-origins=yes --xml=yes --xml-file=valgrind%p.xml --fair-sched=try --gen-suppressions=all"
-
-        valgrind $vg_opt  ./pmix_test -n 4 --timeout 60 --ns-dist 3:1 --fence "[db | 0:;1:3]"
-
-        valgrind $vg_opt  ./pmix_test -n 4 --timeout 60 --job-fence -c
-
-        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-publish
-
-        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-spawn
-
-        valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-connect
-
-        valgrind $vg_opt  ./pmix_test -n 5 --timeout 60 --test-resolve-peers --ns-dist "1:2:2"
-
-        module unload tools/valgrind
-        set -e
-    fi
 fi
 
