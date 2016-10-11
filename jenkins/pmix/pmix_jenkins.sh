@@ -22,6 +22,8 @@ if [ -z "$WORKSPACE" ]; then
     NOJENKINS=${NOJENKINS:="yes"}
 fi
 
+OUTDIR=$WORKSPACE/out
+
 prefix=jenkins
 rm -rf ${WORKSPACE}/${prefix}
 mkdir -p ${WORKSPACE}/${prefix}
@@ -167,6 +169,17 @@ function on_exit
     fi
 }
 
+function check_out()
+{
+    for out in `ls $OUTDIR/out.*`; do
+        status=`cat $out`
+        echo "check file: $out: $status"
+        if [ "$status" != "OK" ]; then
+            test_ret=1
+        fi
+    done
+}
+
 # $1 - test name
 # $2 - test command
 function check_result()
@@ -175,12 +188,14 @@ function check_result()
     eval $timeout_exe $2
     ret=$?
     set -e
+    check_out
     if [ $ret -gt 0 ]; then
         echo "not ok $test_id $1" >> $run_tap
         test_ret=1
     else
         echo "ok $test_id $1" >> $run_tap
     fi
+    rm $OUTDIR/*
     test_id=$((test_id+1))
 }
 
@@ -194,27 +209,27 @@ function pmix_run_tests()
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]"'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]"'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]"'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
 
     # 1 non-blocking fence without data exchange among processes from the 1st namespace
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[0:]"'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[0:]" -o $OUTDIR/out'
     check_result "non-blocking fence w/o data" "$test_exec"
 
     # blocking fence without data exchange among processes from the 1st namespace
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[b | 0:]"'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[b | 0:]" -o $OUTDIR/out'
     check_result "blocking fence w/ data" "$test_exec"
 
     # non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[d | 0:]" --noise "[0:0,1]"'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[d | 0:]" --noise "[0:0,1]" -o $OUTDIR/out'
     check_result "non-blocking fence w/ data" "$test_exec"
 
     # blocking fence with data exchange across processes from the same namespace.
-    test_exec='./pmix_test -n 4 --job-fence -c'
+    test_exec='./pmix_test -n 4 --job-fence -c -o $OUTDIR/out'
     check_result "blocking fence w/ data on the same nspace" "$test_exec"
 
     # 3 fences: 1 - non-blocking without data exchange across processes from ns 0,
@@ -225,19 +240,19 @@ function pmix_run_tests()
 #    check_result "mix fence" $test_exec
 
     # test publish/lookup/unpublish functionality.
-    test_exec='./pmix_test -n 2 --test-publish'
+    test_exec='./pmix_test -n 2 --test-publish -o $OUTDIR/out'
     check_result "publish" "$test_exec"
 
     # test spawn functionality.
-    test_exec='./pmix_test -n 2 --test-spawn'
+    test_exec='./pmix_test -n 2 --test-spawn -o $OUTDIR/out'
     check_result "spawn" "$test_exec"
 
     # test connect/disconnect between processes from the same namespace.
-    test_exec='./pmix_test -n 2 --test-connect'
+    test_exec='./pmix_test -n 2 --test-connect -o $OUTDIR/out'
     check_result "connect" "$test_exec"
 
     # resolve peers from different namespaces.
-    test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2"'
+    test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2" -o $OUTDIR/out'
     check_result "resolve peers" "$test_exec"
 
     # run valgrind
@@ -400,6 +415,10 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
 
     export TMPDIR="/tmp"
 
+    if [ ! -d "$OUTDIR" ]; then
+        mkdir $OUTDIR
+    fi
+
     echo "Checking without dstor ..."
     echo "Checking without dstor:" >> $run_tap
     pmix_run_tests
@@ -415,6 +434,7 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
     rc=$((test_ret+rc))
 
     unset TMPDIR
+    rmdir $OUTDIR
 
     exit $rc
 
