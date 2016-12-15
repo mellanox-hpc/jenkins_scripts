@@ -21,6 +21,8 @@ jenkins_test_ucx=${jenkins_test_ucx:="yes"}
 #jenkins_test_vg=${jenkins_test_vg:="yes"}
 jenkins_test_vg="no"
 jenkins_test_xrc=${jenkins_test_xrc:="yes"}
+jenkins_test_use_ucx_branch=${jenkins_test_use_ucx_branch:="yes"}
+jenkins_test_ucx_branch=${jenkins_test_ucx_branch:="master"}
 
 # Ensure that we will cleanup all temp files
 # even if the application will fail and won't
@@ -571,8 +573,19 @@ if [ "$jenkins_test_build" = "yes" ]; then
     configure_args="--with-platform=contrib/platform/mellanox/optimized --with-ompi-param-check --enable-picky $extra_conf"
 
     if [ "$jenkins_test_ucx" = "yes" ]; then
-        module load hpcx-gcc-stack
-        export ucx_dir=$UCX_DIR
+	    module load hpcx-gcc-stack
+	    if [ "$jenkins_test_use_ucx_branch" = "yes" ]; then
+		    export ucx_root=$WORKSPACE/ucx_local
+		    git clone https://github.com/openucx/ucx -b $jenkins_test_ucx_branch $ucx_root
+		    (cd $ucx_root;\
+		    ./autogen.sh;\
+		    ./contrib/configure-release --prefix=$ucx_root/install;\
+		    make -j9 install;\
+		    )
+		    export UCX_DIR=$ucx_root/install
+
+	    fi
+	    export ucx_dir=$UCX_DIR
     fi
 
     rm -rf $ompi_home_list 
