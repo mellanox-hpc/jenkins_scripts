@@ -584,6 +584,11 @@ if [ "$jenkins_test_build" = "yes" ]; then
 		    )
 		    export UCX_DIR=$ucx_root/install
 
+		    # We need to override LD_LIBRARY_PATH because.
+		    # `module load hpcx-gcc-stack` will pull the legacy
+		    # UCX files that will interfere with our custom-built
+		    # UCX during configuration and the runtime I guess
+		    export LD_LIBRARY_PATH=${UCX_DIR}/lib:$LD_LIBRARY_PATH
 	    fi
 	    export ucx_dir=$UCX_DIR
     fi
