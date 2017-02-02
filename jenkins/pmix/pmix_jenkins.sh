@@ -203,7 +203,7 @@ function pmix_run_tests()
 {
     cd $WORKSPACE/test
 
-    echo "1..11" >> $run_tap
+    echo "1..13" >> $run_tap
 
     test_ret=0
 
@@ -255,6 +255,14 @@ function pmix_run_tests()
     test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2" -o $OUTDIR/out'
     check_result "resolve peers" "$test_exec"
 
+    # resolve peers from different namespaces.
+    test_exec='./pmix_test -n 5 --test-replace 100:0,1,10,50,99 -o $OUTDIR/out'
+    check_result "key replacement" "$test_exec"
+
+    # resolve peers from different namespaces.
+    test_exec='./pmix_test -n 5 --test-internal 10 -o $OUTDIR/out'
+    check_result "local store" "$test_exec"
+
     # run valgrind
     if [ "$jenkins_test_vg" = "yes" ]; then 
         set +e
@@ -266,6 +274,8 @@ function pmix_run_tests()
         valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-spawn
         valgrind $vg_opt  ./pmix_test -n 2 --timeout 60 --test-connect
         valgrind $vg_opt  ./pmix_test -n 5 --timeout 60 --test-resolve-peers --ns-dist "1:2:2"
+        valgrind $vg_opt  ./pmix_test -n 5 --test-replace 100:0,1,10,50,99
+        valgrind $vg_opt  ./pmix_test -n 5 --test-internal 10
         module unload tools/valgrind
         set -e
     fi
