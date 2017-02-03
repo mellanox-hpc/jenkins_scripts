@@ -140,8 +140,8 @@ function on_start()
 {
     echo Starting on host: $(hostname)
 
-    export distro_name=$(python -c 'import platform ; print platform.dist()[0]' | tr '[:upper:]' '[:lower:]')
-    export distro_ver=$(python  -c 'import platform ; print platform.dist()[1]' | tr '[:upper:]' '[:lower:]')
+    export distro_name=`python -c 'import platform ; print platform.dist()[0]' | tr '[:upper:]' '[:lower:]'`
+    export distro_ver=`python  -c 'import platform ; print platform.dist()[1]' | tr '[:upper:]' '[:lower:]'`
     if [ "$distro_name" == "suse" ]; then
         patch_level=$(egrep PATCHLEVEL /etc/SuSE-release|cut -f2 -d=|sed -e "s/ //g")
         if [ -n "$patch_level" ]; then
@@ -203,7 +203,7 @@ function pmix_run_tests()
 {
     cd $WORKSPACE/test
 
-    echo "1..13" >> $run_tap
+    echo "1..14" >> $run_tap
 
     test_ret=0
 
@@ -232,12 +232,16 @@ function pmix_run_tests()
     test_exec='./pmix_test -n 4 --job-fence -c -o $OUTDIR/out'
     check_result "blocking fence w/ data on the same nspace" "$test_exec"
 
+    # blocking fence with data exchange across processes from the same namespace.
+    test_exec='./pmix_test -n 4 --job-fence -o $OUTDIR/out'
+    check_result "blocking fence w/o data on the same nspace" "$test_exec"
+
     # 3 fences: 1 - non-blocking without data exchange across processes from ns 0,
     # 2 - non-blocking across processes 0 and 1 from ns 0 and process 3 from ns 1,
     # 3 - blocking with data exchange across processes from their own namespace.
-#    Disabled as incorrect at the moment
-#    test_exec='./pmix_test -n 4 --job-fence -c --fence "[0:][d|0:0-1;1:]" --use-same-keys --ns-dist "3:1"'
-#    check_result "mix fence" $test_exec
+    # Disabled as incorrect at the moment
+    # test_exec='./pmix_test -n 4 --job-fence -c --fence "[0:][d|0:0-1;1:]" --use-same-keys --ns-dist "3:1"'
+    # check_result "mix fence" $test_exec
 
     # test publish/lookup/unpublish functionality.
     test_exec='./pmix_test -n 2 --test-publish -o $OUTDIR/out'
