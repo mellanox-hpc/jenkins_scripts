@@ -203,7 +203,7 @@ function check_result()
 
 function pmix_run_tests()
 {
-    cd $WORKSPACE/test
+    cd $build_dir/test
 
     echo "1..14" >> $run_tap
 
