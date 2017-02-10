@@ -472,7 +472,7 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
     echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
     mkdir ${build_dir}
     cd ${build_dir}
-    echo ${WORKSPACE}./configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
+    echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
     make $make_opt install
     echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
     echo "Checking with dstor:" >> $run_tap
