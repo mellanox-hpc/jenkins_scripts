@@ -27,11 +27,13 @@ OUTDIR=$WORKSPACE/out
 prefix=jenkins
 rm -rf ${WORKSPACE}/${prefix}
 mkdir -p ${WORKSPACE}/${prefix}
-pmix_dir=${WORKSPACE}/${prefix}/install
-build_dir=${WORKSPACE}/${prefix}/build
-rpm_dir=${WORKSPACE}/${prefix}/rpms
-cov_dir=${WORKSPACE}/${prefix}/cov
-tarball_dir=${WORKSPACE}/${prefix}/tarball
+work_dir=${WORKSPACE}/${prefix}
+build_dir=${work_dir}/build
+pmix_dir=${work_dir}/install
+build_dir=${work_dir}/build
+rpm_dir=${work_dir}/rpms
+cov_dir=${work_dir}/cov
+tarball_dir=${work_dir}/tarball
 
 
 make_opt="-j$(nproc)"
@@ -422,29 +424,50 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
     run_tap=$WORKSPACE/run_test.tap
     rm -rf $run_tap
 
-    # build pmix
-    $autogen_script 
-    echo ./configure --prefix=$pmix_dir $configure_args --disable-visibility --disable-dstore | bash -xeE
-    make $make_opt install
-
     export TMPDIR="/tmp"
 
     if [ ! -d "$OUTDIR" ]; then
         mkdir $OUTDIR
     fi
 
-    echo "Checking without dstor ..."
+    # Run autogen only once
+    $autogen_script 
+
+    # Test pmix/messaging
+    echo "--------------------------- Building with messages ----------------------------------------"
+    mkdir ${build_dir}
+    cd ${build_dir}
+    echo ${WORKSPACE}/configure --prefix=${pmix_dir} $configure_args --disable-visibility --disable-dstore | bash -xeE
+    make $make_opt install
+    echo "--------------------------- Checking with messages ----------------------------------------"
     echo "Checking without dstor:" >> $run_tap
     pmix_run_tests
+    rm -Rf ${pmix_dir} ${build_dir}
     rc=$test_ret
 
-    cd $WORKSPACE
-    echo ./configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
+
+    # Test pmix/dstore/flock
+    echo "--------------------------- Building with dstore/flock ----------------------------------------"
+    mkdir ${build_dir}
+    cd ${build_dir}
+    echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore --disable-dstore-pthlck | bash -xeE
     make $make_opt install
-    echo "Checking with dstor ..."
+    echo "--------------------------- Checking with dstore/flock ----------------------------------------"
+    echo "Checking with dstor/flock:" >> $run_tap
+    pmix_run_tests
+    rm -Rf ${pmix_dir} ${build_dir}
+    rc=$((test_ret+rc))
+
+    # Test pmix/dstore/pthread-lock
+    echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
+    mkdir ${build_dir}
+    cd ${build_dir}
+    echo ${WORKSPACE}./configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
+    make $make_opt install
+    echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
     echo "Checking with dstor:" >> $run_tap
     pmix_run_tests
-
+    rm -Rf ${pmix_dir} ${build_dir}
     rc=$((test_ret+rc))
 
     unset TMPDIR
