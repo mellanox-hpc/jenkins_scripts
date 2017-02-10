@@ -413,6 +413,8 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
         echo "Building PMIX bin.rpm"
         rpm_flags="--define 'mflags -j8' --define '_source_filedigest_algorithm md5' --define '_binary_filedigest_algorithm md5'"
         (cd ./contrib/ && env rpmbuild_options="$rpm_flags" rpmtopdir=$rpm_dir ./buildrpm.sh $tarball_src)
+        # check distclean
+        make $make_opt distclean 
     fi
 fi
 
