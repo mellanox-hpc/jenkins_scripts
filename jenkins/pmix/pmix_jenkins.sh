@@ -297,6 +297,7 @@ trap "on_exit" INT TERM ILL KILL FPE SEGV ALRM
 
 on_start
 
+autogen_done=0
 
 cd $WORKSPACE
 if [ "$jenkins_test_build" = "yes" ]; then
@@ -318,7 +319,8 @@ if [ "$jenkins_test_build" = "yes" ]; then
     configure_args="--with-libevent=$libevent_dir"
 
     # build pmix
-    $autogen_script 
+    $autogen_script
+    autogen_done=1 
     echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE
     make $make_opt install
     jenkins_build_passed=1
@@ -381,7 +383,10 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
 
     # check distclean
     make $make_opt distclean 
-    $autogen_script 
+    if [ "${autogen_done}" != "1" ]; then
+        $autogen_script 
+        autogen_done=1
+    fi
     echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE || exit 11
 
     if [ -x /usr/bin/dpkg-buildpackage ]; then
@@ -433,7 +438,10 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
     fi
 
     # Run autogen only once
-    $autogen_script 
+    if [ "${autogen_done}" != "1" ]; then 
+        $autogen_script 
+        autogen_done=1
+    fi
 
     # Test pmix/messaging
     echo "--------------------------- Building with messages ----------------------------------------"
