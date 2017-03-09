@@ -387,11 +387,11 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
         $autogen_script 
         autogen_done=1
     fi
-    echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE || exit 11
 
     if [ -x /usr/bin/dpkg-buildpackage ]; then
         echo "Do not support PMIX on debian"
     else
+        echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE || exit 11
         echo "Building PMIX src.rpm"
         rm -rf $tarball_dir
         mkdir -p $tarball_dir
