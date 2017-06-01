@@ -192,10 +192,10 @@ function check_result()
     set -e
     check_out
     if [ $ret -gt 0 ]; then
-        echo "not ok $test_id $1" >> $run_tap
+        echo "not ok $test_id $1 ($2)" >> $run_tap
         test_ret=1
     else
-        echo "ok $test_id $1" >> $run_tap
+        echo "ok $test_id $1 ($2)" >> $run_tap
     fi
     rm $OUTDIR/*
     test_id=$((test_id+1))
@@ -482,7 +482,7 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
 
     unset TMPDIR
     rmdir $OUTDIR
-
+    cat $WORKSPACE/run_test.tap
     exit $rc
 
 fi
