@@ -201,9 +201,18 @@ function check_result()
     test_id=$((test_id+1))
 }
 
+# $1 - GDS external module name
 function pmix_run_tests()
 {
     cd $build_dir/test
+
+    # set the gds param
+    gds=$1
+    if [ "" = "$gds" ]; then
+        gds_param=""
+    else
+        gds_param="--gds $gds"
+    fi
 
     echo "1..14" >> $run_tap
 
@@ -212,31 +221,31 @@ function pmix_run_tests()
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]" -o $OUTDIR/out'
-    check_result "blocking fence w/ data all" "$test_exec"
+    check_result "blocking fence w/ data all" "$test_exec $gds_param"
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]" -o $OUTDIR/out'
-    check_result "blocking fence w/ data all" "$test_exec"
+    check_result "blocking fence w/ data all" "$test_exec $gds_param"
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]" -o $OUTDIR/out'
-    check_result "blocking fence w/ data all" "$test_exec"
+    check_result "blocking fence w/ data all" "$test_exec $gds_param"
 
     # 1 non-blocking fence without data exchange among processes from the 1st namespace
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[0:]" -o $OUTDIR/out'
-    check_result "non-blocking fence w/o data" "$test_exec"
+    check_result "non-blocking fence w/o data" "$test_exec $gds_param"
 
     # blocking fence without data exchange among processes from the 1st namespace
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[b | 0:]" -o $OUTDIR/out'
-    check_result "blocking fence w/ data" "$test_exec"
+    check_result "blocking fence w/ data" "$test_exec $gds_param"
 
     # non-blocking fence with data exchange among processes from the 1st namespace. Ranks 0, 1 from ns 0 are sleeping for 2 sec before doing fence test.
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[d | 0:]" --noise "[0:0,1]" -o $OUTDIR/out'
-    check_result "non-blocking fence w/ data" "$test_exec"
+    check_result "non-blocking fence w/ data" "$test_exec $gds_param"
 
     # blocking fence with data exchange across processes from the same namespace.
     test_exec='./pmix_test -n 4 --job-fence -c -o $OUTDIR/out'
-    check_result "blocking fence w/ data on the same nspace" "$test_exec"
+    check_result "blocking fence w/ data on the same nspace" "$test_exec $gds_param"
 
     # blocking fence with data exchange across processes from the same namespace.
     test_exec='./pmix_test -n 4 --job-fence -o $OUTDIR/out'
-    check_result "blocking fence w/o data on the same nspace" "$test_exec"
+    check_result "blocking fence w/o data on the same nspace" "$test_exec $gds_param"
 
     # 3 fences: 1 - non-blocking without data exchange across processes from ns 0,
     # 2 - non-blocking across processes 0 and 1 from ns 0 and process 3 from ns 1,
@@ -247,27 +256,27 @@ function pmix_run_tests()
 
     # test publish/lookup/unpublish functionality.
     test_exec='./pmix_test -n 2 --test-publish -o $OUTDIR/out'
-    check_result "publish" "$test_exec"
+    check_result "publish" "$test_exec $gds_param"
 
     # test spawn functionality.
     test_exec='./pmix_test -n 2 --test-spawn -o $OUTDIR/out'
-    check_result "spawn" "$test_exec"
+    check_result "spawn" "$test_exec $gds_param"
 
     # test connect/disconnect between processes from the same namespace.
     test_exec='./pmix_test -n 2 --test-connect -o $OUTDIR/out'
-    check_result "connect" "$test_exec"
+    check_result "connect" "$test_exec $gds_param"
 
     # resolve peers from different namespaces.
     test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2" -o $OUTDIR/out'
-    check_result "resolve peers" "$test_exec"
+    check_result "resolve peers" "$test_exec $gds_param"
 
     # resolve peers from different namespaces.
     test_exec='./pmix_test -n 5 --test-replace 100:0,1,10,50,99 -o $OUTDIR/out'
-    check_result "key replacement" "$test_exec"
+    check_result "key replacement" "$test_exec $gds_param"
 
     # resolve peers from different namespaces.
     test_exec='./pmix_test -n 5 --test-internal 10 -o $OUTDIR/out'
-    check_result "local store" "$test_exec"
+    check_result "local store" "$test_exec $gds_param"
 
     # run valgrind
     if [ "$jenkins_test_vg" = "yes" ]; then 
@@ -391,7 +400,7 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
     if [ -x /usr/bin/dpkg-buildpackage ]; then
         echo "Do not support PMIX on debian"
     else
-        echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE || exit 11
+        echo ./configure --prefix=$pmix_dir $configure_args | bash -xeE || exit
         echo "Building PMIX src.rpm"
         rm -rf $tarball_dir
         mkdir -p $tarball_dir
@@ -443,42 +452,81 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
         autogen_done=1
     fi
 
-    # Test pmix/messaging
-    echo "--------------------------- Building with messages ----------------------------------------"
-    mkdir ${build_dir}
-    cd ${build_dir}
-    echo ${WORKSPACE}/configure --prefix=${pmix_dir} $configure_args --disable-visibility --disable-dstore | bash -xeE
-    make $make_opt install
-    echo "--------------------------- Checking with messages ----------------------------------------"
-    echo "Checking without dstor:" >> $run_tap
-    pmix_run_tests
-    rm -Rf ${pmix_dir} ${build_dir}
-    rc=$test_ret
+    vers=1
+    if [ -f "config/pmix_get_version.sh" ] && [ -f "VERSION" ]; then
+        vers=`config/pmix_get_version.sh VERSION --major`
+    fi
 
+    rc=0
 
-    # Test pmix/dstore/flock
-    echo "--------------------------- Building with dstore/flock ----------------------------------------"
-    mkdir ${build_dir}
-    cd ${build_dir}
-    echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore --disable-dstore-pthlck | bash -xeE
-    make $make_opt install
-    echo "--------------------------- Checking with dstore/flock ----------------------------------------"
-    echo "Checking with dstor/flock:" >> $run_tap
-    pmix_run_tests
-    rm -Rf ${pmix_dir} ${build_dir}
-    rc=$((test_ret+rc))
+    if [ "$vers" -ge "2" ]; then
+        echo "----------------------------------- Building ----------------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=${pmix_dir} $configure_args --disable-visibility --enable-dstore | bash -xeE
+        make $make_opt install
 
-    # Test pmix/dstore/pthread-lock
-    echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
-    mkdir ${build_dir}
-    cd ${build_dir}
-    echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
-    make $make_opt install
-    echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
-    echo "Checking with dstor:" >> $run_tap
-    pmix_run_tests
-    rm -Rf ${pmix_dir} ${build_dir}
-    rc=$((test_ret+rc))
+        echo "--------------------------- Checking with messages ----------------------------------------"
+        echo "Checking without dstor:" >> $run_tap
+        pmix_run_tests "hash"
+        rc=$((test_ret+rc))
+
+        echo "--------------------------- Checking with pthread-lock ------------------------------------"
+        echo "Checking with dstor:" >> $run_tap
+        pmix_run_tests "ds12"
+
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+
+        # Test pmix/dstore/flock
+        echo "--------------------------- Building with dstore/flock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore --disable-dstore-pthlck | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/flock ----------------------------------------"
+        echo "Checking with dstor/flock:" >> $run_tap
+        pmix_run_tests "ds12"
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+
+    else
+        # Test pmix/messaging
+        echo "--------------------------- Building with messages ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=${pmix_dir} $configure_args --disable-visibility --enable-dstore | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with messages ----------------------------------------"
+        echo "Checking without dstor:" >> $run_tap
+        pmix_run_tests
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+
+        # Test pmix/dstore/flock
+        echo "--------------------------- Building with dstore/flock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore --disable-dstore-pthlck | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/flock ----------------------------------------"
+        echo "Checking with dstor/flock:" >> $run_tap
+        pmix_run_tests
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+
+        # Test pmix/dstore/pthread-lock
+        echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
+        echo "Checking with dstor:" >> $run_tap
+        pmix_run_tests
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+    fi
 
     unset TMPDIR
     rmdir $OUTDIR
