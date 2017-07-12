@@ -30,6 +30,7 @@ jenkins_test_ucx_branch=${jenkins_test_ucx_branch:="master"}
 jenkins_session_base=`mktemp -d`
 function jenkins_cleanup {
   rm -rf "$jenkins_session_base"
+  echo $?
 }
 trap jenkins_cleanup EXIT
 export OMPI_MCA_orte_tmpdir_base=$jenkins_session_base
