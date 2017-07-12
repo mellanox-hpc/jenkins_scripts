@@ -1,7 +1,7 @@
 #!/bin/bash -xeE
 export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
-help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll ompi/mca/pml/yall ompi/mca/pml/ucx ompi/mca/spml/ucx"}
+help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/hcoll ompi/mca/pml/yall ompi/mca/pml/ucx ompi/mca/spml/ucx"}
 hca_port=${hca_port:=1}
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_examples=${jenkins_test_examples:="yes"}
@@ -611,7 +611,7 @@ if [ -n "$jenkins_build_passed" ]; then
     # check coverity
     if [ "$jenkins_test_cov" = "yes" ]; then
         vpath_dir=$WORKSPACE
-        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/fca ompi/mca/coll/hcoll"
+        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/hcoll"
         if [ "$jenkins_test_ucx" = "yes" ]; then
             cov_proj="$cov_proj ompi/mca/pml/ucx"
         fi
