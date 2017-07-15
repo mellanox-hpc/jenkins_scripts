@@ -446,7 +446,7 @@ function test_tune()
     echo "check if mca_base_env_list parameter is supported in $OMPI_HOME"
     val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_env_list | wc -l)
 
-    mca="-mca pml ob1 -mca btl self,sm"
+    mca="-mca pml ob1 -mca btl self,vader"
 
     if [ $val -gt 0 ]; then
         echo "test mca_base_env_list option in $OMPI_HOME"
@@ -528,7 +528,7 @@ function test_mindist()
     export TEST_PHYS_ID_COUNT=$var
     var=$(grep "core id" /proc/cpuinfo | sort | uniq | wc -l)
     export TEST_CORE_ID_COUNT=$var
-    mca="-mca pml ob1 -mca btl self,sm"
+    mca="-mca pml ob1 -mca btl self,vader"
     set +e
     if [ $val -gt 0 ]; then
         echo "test the dist mapping policy in $OMPI_HOME"
@@ -827,7 +827,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             UCX_VG="$UCX_DIR/debug/lib/libucp.so:$UCX_DIR/debug/lib/libucm.so:$UCX_DIR/debug/lib/libucs.so:$UCX_DIR/debug/lib/libuct.so"
 
-            $mpirun $mpi_opt -mca pml ob1    -mca btl self,sm valgrind $vg_opt $mpi_exe
+            $mpirun $mpi_opt -mca pml ob1    -mca btl self,vader valgrind $vg_opt $mpi_exe
 #            $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
             $oshrun $mpi_opt -mca spml ikrit -mca pml yalla -x LD_PRELOAD=$MXM_DIR/debug/lib/libmxm.so valgrind $vg_opt $shmem_exe
             #$oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_TLS=rc,cm -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
