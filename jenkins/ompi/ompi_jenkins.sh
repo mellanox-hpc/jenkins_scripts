@@ -55,11 +55,15 @@ btl_sm=${btl_sm:="yes"}
 btl_openib=${btl_openib:="yes"}
 btl_vader=${btl_vader:="yes"}
 
-# in the master branch openib was fixed to support MT models
 if [ "$ghprbTargetBranch" != "v2.x" ] && [ "$ghprbTargetBranch" != "v2.0.x" ] && \
    [ "$ghprbTargetBranch" != "v1.10" ]; then
     # btl/sm was removed starting from v3.0.x, do not consider branches prior to v1.10
     btl_sm="no"
+fi
+
+if [ "$ghprbTargetBranch" = "v2.x" ]; then
+    # temp disable of btl/openib for v2.x branch
+    btl_openib="no"
 fi
 
 btl_tcp_bkp=$btl_tcp
