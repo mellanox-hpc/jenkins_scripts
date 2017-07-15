@@ -205,12 +205,11 @@ function mpi_runner()
     local exe_args=${3}
     local common_mca="-bind-to none -mca orte_tmpdir_base $jenkins_session_base"
     local mpirun="$OMPI_HOME/bin/mpirun"
-    
 
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
     if [ $has_timeout -gt 0 ]; then
-	    timeout_exe=""
-	    common_mca="$common_mca $mpi_timeout"
+        timeout_exe=""
+        common_mca="$common_mca $mpi_timeout"
     fi
     local mca="$common_mca"
 
@@ -287,8 +286,8 @@ function oshmem_runner()
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
     if [ $has_timeout -gt 0 ]; then
-	    timeout_exe=""
-	    common_mca="$common_mca $mpi_timeout"
+        timeout_exe=""
+        common_mca="$common_mca $mpi_timeout"
     fi
 
     local mca="$common_mca"
@@ -338,12 +337,12 @@ function slurm_runner()
     local exe_path="$2"
     local exe_args=${3}
 
-	command -v srun >/dev/null 2>&1 || { echo "srun is not found."; exit 1; }
+    command -v srun >/dev/null 2>&1 || { echo "srun is not found."; exit 1; }
 
     # check PMI1
     $timeout_exe srun -p pj1 -n $np env OMPI_MCA_pml=yalla ${AFFINITY} ${exe_path} ${exe_args}
 
-	# check PMI2
+    # check PMI2
     $timeout_exe srun -p pj1 -n $np --mpi=pmi2 env OMPI_MCA_pml=yalla ${AFFINITY} ${exe_path} ${exe_args}
 }
 
@@ -575,24 +574,23 @@ if [ "$jenkins_test_build" = "yes" ]; then
     configure_args="--with-platform=contrib/platform/mellanox/optimized --with-ompi-param-check --enable-picky $extra_conf"
 
     if [ "$jenkins_test_ucx" = "yes" ]; then
-	    module load hpcx-gcc-stack
-	    if [ "$jenkins_test_use_ucx_branch" = "yes" ]; then
-		    export ucx_root=$WORKSPACE/ucx_local
-		    git clone https://github.com/openucx/ucx -b $jenkins_test_ucx_branch $ucx_root
-		    (cd $ucx_root;\
-		    ./autogen.sh;\
-		    ./contrib/configure-release --prefix=$ucx_root/install;\
-		    make -j9 install;\
-		    )
-		    export UCX_DIR=$ucx_root/install
+        module load hpcx-gcc-stack
+        if [ "$jenkins_test_use_ucx_branch" = "yes" ]; then
+            export ucx_root=$WORKSPACE/ucx_local
+            git clone https://github.com/openucx/ucx -b $jenkins_test_ucx_branch $ucx_root
+            (cd $ucx_root;\
+            ./autogen.sh;\
+            ./contrib/configure-release --prefix=$ucx_root/install;\
+            make -j9 install; )
+           export UCX_DIR=$ucx_root/install
 
-		    # We need to override LD_LIBRARY_PATH because.
-		    # `module load hpcx-gcc-stack` will pull the legacy
-		    # UCX files that will interfere with our custom-built
-		    # UCX during configuration and the runtime I guess
-		    export LD_LIBRARY_PATH=${UCX_DIR}/lib:$LD_LIBRARY_PATH
-	    fi
-	    export ucx_dir=$UCX_DIR
+           # We need to override LD_LIBRARY_PATH because.
+           # `module load hpcx-gcc-stack` will pull the legacy
+           # UCX files that will interfere with our custom-built
+           # UCX during configuration and the runtime I guess
+           export LD_LIBRARY_PATH=${UCX_DIR}/lib:$LD_LIBRARY_PATH
+        fi
+        export ucx_dir=$UCX_DIR
     fi
 
     rm -rf $ompi_home_list 
@@ -772,8 +770,8 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 btl_openib=no
             fi
             btl_sm=no
-	    jenkins_test_ucx_bak=$jenkins_test_ucx
-	    jenkins_test_ucx=no
+            jenkins_test_ucx_bak=$jenkins_test_ucx
+            jenkins_test_ucx=no
             for exe in overlap latency; do 
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 4 $exe_path)
@@ -782,7 +780,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 2 $exe_path 4)
             done
-	    jenkins_test_ucx=$jenkins_test_ucx_bak
+            jenkins_test_ucx=$jenkins_test_ucx_bak
             btl_openib=yes
             btl_tcp=yes
             btl_sm=yes
