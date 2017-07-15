@@ -55,6 +55,20 @@ btl_sm=${btl_sm:="yes"}
 btl_openib=${btl_openib:="yes"}
 btl_vader=${btl_vader:="yes"}
 
+# in the master branch openib was fixed to support MT models
+if [ "$ghprbTargetBranch" != "v2.x" ] && [ "$ghprbTargetBranch" != "v2.0.x" ] && \
+   [ "$ghprbTargetBranch" = "v1.10" ]; then
+    # btl/sm was removed starting from v3.0.x, do not consider branches prior to v1.10
+    btl_sm="no"
+fi
+
+btl_tcp_bkp=$btl_tcp
+btl_sm_bkp=$btl_sm
+btl_openib_bkp=$btl_openib
+btl_vader_bkp=$btl_vader
+
+
+
 # TAP directive for MLNX modules in coverity
 # empty - treat errors as failures
 # can be TODO, SKIP
@@ -781,10 +795,10 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 2 $exe_path 4)
             done
             jenkins_test_ucx=$jenkins_test_ucx_bak
-            btl_openib=yes
-            btl_tcp=yes
-            btl_sm=yes
-            btl_vader=yes
+            btl_openib=$btl_openib_bkp
+            btl_tcp=$btl_tcp_bkp
+            btl_sm=$btl_sm_bkp
+            btl_vader=$btl_vader_bkp
         fi
 
         if [ "$jenkins_test_vg" = "yes" ]; then 
