@@ -61,10 +61,10 @@ if [ "$ghprbTargetBranch" != "v2.x" ] && [ "$ghprbTargetBranch" != "v2.0.x" ] &&
     btl_sm="no"
 fi
 
-#if [ "$ghprbTargetBranch" = "v2.x" ]; then
-    # temp disable of btl/openib for v2.x branch
-#    btl_openib="no"
-#fi
+if [ "$ghprbTargetBranch" = "v2.x" ]; then
+    # temp disable XRC on btl/openib for v2.x branch
+    jenkins_test_xrc=no
+fi
 
 btl_tcp_bkp=$btl_tcp
 btl_sm_bkp=$btl_sm
