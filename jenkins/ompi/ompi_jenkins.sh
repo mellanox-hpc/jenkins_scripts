@@ -20,7 +20,8 @@ jenkins_test_comments=${jenkins_test_comments:="no"}
 jenkins_test_ucx=${jenkins_test_ucx:="yes"}
 #jenkins_test_vg=${jenkins_test_vg:="yes"}
 jenkins_test_vg="no"
-jenkins_test_xrc=${jenkins_test_xrc:="yes"}
+#jenkins_test_xrc=${jenkins_test_xrc:="yes"}
+jenkins_test_xrc="no"
 jenkins_test_use_ucx_branch=${jenkins_test_use_ucx_branch:="no"}
 jenkins_test_ucx_branch=${jenkins_test_ucx_branch:="master"}
 
@@ -59,11 +60,6 @@ if [ "$ghprbTargetBranch" != "v2.x" ] && [ "$ghprbTargetBranch" != "v2.0.x" ] &&
    [ "$ghprbTargetBranch" != "v1.10" ]; then
     # btl/sm was removed starting from v3.0.x, do not consider branches prior to v1.10
     btl_sm="no"
-fi
-
-if [ "$ghprbTargetBranch" = "v2.x" ]; then
-    # temp disable XRC on btl/openib for v2.x branch
-    jenkins_test_xrc=no
 fi
 
 btl_tcp_bkp=$btl_tcp
