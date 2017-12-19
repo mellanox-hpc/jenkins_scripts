@@ -454,7 +454,7 @@ function test_tune()
 
         # check amca param
         echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -am $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
+        val=$($OMPI_HOME/bin/mpirun $mca -np 2 --tune $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
         if [ $val -ne 10 ]; then
             exit 1
         fi
