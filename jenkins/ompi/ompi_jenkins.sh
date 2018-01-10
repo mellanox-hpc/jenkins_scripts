@@ -48,7 +48,7 @@ if [ ! -d "ompi/mca/pml/ucx" ]; then
     jenkins_test_ucx="no"
 fi
 
-timeout_exe=${timout_exe:="$AFFINITY_GLOB timeout -s SIGSEGV 15m"}
+timeout_exe=${timout_exe:="$AFFINITY_GLOB timeout -s SIGSEGV 17m"}
 mpi_timeout="--report-state-on-timeout --get-stack-traces --timeout 900"
 
 # internal flags to select/unselect OMPI transports used in test
@@ -227,7 +227,7 @@ function mpi_runner()
         has_timeout=$($OMPI_HOME/bin/mpirun --help debug 2>/dev/null | grep timeout | wc -l)
     fi
     if [ "$has_timeout" -gt 0 ]; then
-        timeout_exe=""
+        # We leave external timeout just in case the internal one is broken
         common_mca="$common_mca $mpi_timeout"
     fi
 
