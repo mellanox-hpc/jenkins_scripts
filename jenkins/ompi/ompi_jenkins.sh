@@ -222,7 +222,11 @@ function mpi_runner()
     local mpirun="$OMPI_HOME/bin/mpirun"
 
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
-    if [ $has_timeout -gt 0 ]; then
+    if [ "$has_timeout" = "0" ]; then
+        # Help in newer versions was changed
+        has_timeout=$($OMPI_HOME/bin/mpirun --help debug 2>/dev/null | grep timeout | wc -l)
+    fi
+    if [ "$has_timeout" -gt 0 ]; then
         timeout_exe=""
         common_mca="$common_mca $mpi_timeout"
     fi
