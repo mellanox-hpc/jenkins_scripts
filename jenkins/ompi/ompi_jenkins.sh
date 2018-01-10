@@ -24,6 +24,7 @@ jenkins_test_vg="no"
 jenkins_test_xrc="no"
 jenkins_test_use_ucx_branch=${jenkins_test_use_ucx_branch:="no"}
 jenkins_test_ucx_branch=${jenkins_test_ucx_branch:="master"}
+jenkins_test_hcoll="no"
 
 # Ensure that we will cleanup all temp files
 # even if the application will fail and won't
@@ -224,6 +225,10 @@ function mpi_runner()
     if [ $has_timeout -gt 0 ]; then
         timeout_exe=""
         common_mca="$common_mca $mpi_timeout"
+    fi
+
+    if [ "$jenkins_test_hcoll" = "no" ]; then
+        common_mca="$common_mca -mca coll ^hcoll"
     fi
     local mca="$common_mca"
 
