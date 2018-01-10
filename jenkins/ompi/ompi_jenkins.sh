@@ -307,11 +307,21 @@ function oshmem_runner()
     local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=256M -mca orte_tmpdir_base $jenkins_session_base"
 
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
+
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
-    if [ $has_timeout -gt 0 ]; then
-        timeout_exe=""
+    if [ "$has_timeout" = "0" ]; then
+        # Help in newer versions was changed
+        has_timeout=$($OMPI_HOME/bin/mpirun --help debug 2>/dev/null | grep timeout | wc -l)
+    fi
+    if [ "$has_timeout" -gt 0 ]; then
+        # We leave external timeout just in case the internal one is broken
         common_mca="$common_mca $mpi_timeout"
     fi
+
+    if [ "$jenkins_test_hcoll" = "no" ]; then
+        common_mca="$common_mca -mca coll ^hcoll"
+    fi
+
 
     local mca="$common_mca"
 
