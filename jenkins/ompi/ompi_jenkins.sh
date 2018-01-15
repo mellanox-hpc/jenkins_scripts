@@ -24,7 +24,7 @@ jenkins_test_vg="no"
 jenkins_test_xrc="no"
 jenkins_test_use_ucx_branch=${jenkins_test_use_ucx_branch:="no"}
 jenkins_test_ucx_branch=${jenkins_test_ucx_branch:="master"}
-jenkins_test_hcoll="no"
+jenkins_test_hcoll="yes"
 
 # Ensure that we will cleanup all temp files
 # even if the application will fail and won't
@@ -776,6 +776,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
         fi
 
         if [ "$jenkins_test_threads" = "yes" ]; then 
+            local test_hcoll_bkp="$jenkins_test_hcoll"
             exe_dir=$OMPI_HOME/thread_tests
             if [ ! -d "$exe_dir" ]; then 
                 pushd .
@@ -791,6 +792,9 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 make CC=$OMPI_HOME/bin/mpicc
                 popd
             fi
+
+            # Temp disable HCOLL for the MT case
+            jenkins_test_hcoll="no"
 
             # disabling btls which known to fail with threads
             if [ "$jenkins_test_known_issues" == "no" ]; then 
@@ -818,6 +822,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             btl_tcp=$btl_tcp_bkp
             btl_sm=$btl_sm_bkp
             btl_vader=$btl_vader_bkp
+            jenkins_test_hcoll=$test_hcoll_bkp
         fi
 
         if [ "$jenkins_test_vg" = "yes" ]; then 
