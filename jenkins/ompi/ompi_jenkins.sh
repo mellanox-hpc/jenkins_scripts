@@ -621,9 +621,9 @@ if [ "$jenkins_test_build" = "yes" ]; then
            # `module load hpcx-gcc-stack` will pull the legacy
            # UCX files that will interfere with our custom-built
            # UCX during configuration and the runtime I guess
-           export LD_LIBRARY_PATH=${UCX_DIR}/lib:$LD_LIBRARY_PATH
+           export LD_LIBRARY_PATH=${HPCX_UCX_DIR}/lib:$LD_LIBRARY_PATH
         fi
-        export ucx_dir=$UCX_DIR
+        export ucx_dir=$HPCX_UCX_DIR
     fi
 
     rm -rf $ompi_home_list 
@@ -840,7 +840,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             mpirun=$OMPI_HOME/bin/mpirun
             oshrun=$OMPI_HOME/bin/oshrun
 
-            UCX_VG="$UCX_DIR/debug/lib/libucp.so:$UCX_DIR/debug/lib/libucm.so:$UCX_DIR/debug/lib/libucs.so:$UCX_DIR/debug/lib/libuct.so"
+            UCX_VG="$HPCX_UCX_DIR/debug/lib/libucp.so:$HPCX_UCX_DIR/debug/lib/libucm.so:$HPCX_UCX_DIR/debug/lib/libucs.so:$HPCX_UCX_DIR/debug/lib/libuct.so"
 
             $mpirun $mpi_opt -mca pml ob1    -mca btl self,vader valgrind $vg_opt $mpi_exe
 #            $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
