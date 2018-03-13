@@ -35,6 +35,7 @@ rpm_dir=${work_dir}/rpms
 cov_dir=${work_dir}/cov
 tarball_dir=${work_dir}/tarball
 
+pmix_ver=`cat VERSION | grep "major=" | cut -d "=" -f 2``cat VERSION | grep "minor=" | cut -d "=" -f 2`
 
 make_opt="-j$(nproc)"
 
@@ -261,13 +262,15 @@ function pmix_run_tests()
     test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2" -o $OUTDIR/out'
     check_result "resolve peers" "$test_exec"
 
-    # resolve peers from different namespaces.
-    test_exec='./pmix_test -n 5 --test-replace 100:0,1,10,50,99 -o $OUTDIR/out'
-    check_result "key replacement" "$test_exec"
+    if [ "$pmix_ver" -gt 11 ]; then
+        # resolve peers from different namespaces.
+        test_exec='./pmix_test -n 5 --test-replace 100:0,1,10,50,99 -o $OUTDIR/out'
+        check_result "key replacement" "$test_exec"
 
-    # resolve peers from different namespaces.
-    test_exec='./pmix_test -n 5 --test-internal 10 -o $OUTDIR/out'
-    check_result "local store" "$test_exec"
+        # resolve peers from different namespaces.
+        test_exec='./pmix_test -n 5 --test-internal 10 -o $OUTDIR/out'
+        check_result "local store" "$test_exec"
+    fi
 
     # run valgrind
     if [ "$jenkins_test_vg" = "yes" ]; then 
