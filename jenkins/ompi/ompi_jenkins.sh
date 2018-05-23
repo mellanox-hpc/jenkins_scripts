@@ -1,7 +1,7 @@
 #!/bin/bash -xeE
 export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
-help_txt_list=${help_txt_list:="oshmem ompi/mca/mtl/mxm ompi/mca/coll/hcoll ompi/mca/pml/yall ompi/mca/pml/ucx ompi/mca/spml/ucx"}
+help_txt_list=${help_txt_list:="oshmem ompi/mca/coll/hcoll ompi/mca/pml/yall ompi/mca/pml/ucx ompi/mca/spml/ucx"}
 hca_port=${hca_port:=1}
 jenkins_test_build=${jenkins_test_build:="yes"}
 jenkins_test_examples=${jenkins_test_examples:="yes"}
@@ -278,8 +278,6 @@ function mpi_runner()
             fi
             if [ $has_yalla -gt 0 ]; then
                 $timeout_exe $mpirun -np $np $mca -mca pml yalla ${AFFINITY} ${exe_path} ${exe_args}
-            else
-                $timeout_exe $mpirun -np $np $mca -mca pml cm -mca mtl mxm ${AFFINITY} ${exe_path} ${exe_args}
             fi
             if [ -n "$mpi_custom_args" ]; then
                 $timeout_exe $mpirun -np $np $mca $mpi_custome_args ${AFFINITY} ${exe_path} ${exe_args}
@@ -344,7 +342,6 @@ function oshmem_runner()
             echo "Running $exe_path ${exe_args}"
 #            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${AFFINITY} ${exe_path} ${exe_args}
 #            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${AFFINITY} ${exe_path} ${exe_args}
-            $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml cm  -mca mtl mxm            ${AFFINITY} ${exe_path} ${exe_args}
             $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla                       ${AFFINITY} ${exe_path} ${exe_args}
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
@@ -644,7 +641,7 @@ if [ -n "$jenkins_build_passed" ]; then
     # check coverity
     if [ "$jenkins_test_cov" = "yes" ]; then
         vpath_dir=$WORKSPACE
-        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/mtl/mxm ompi/mca/coll/hcoll"
+        cov_proj="all oshmem ompi/mca/pml/yalla ompi/mca/coll/hcoll"
         if [ "$jenkins_test_ucx" = "yes" ]; then
             cov_proj="$cov_proj ompi/mca/pml/ucx"
         fi
