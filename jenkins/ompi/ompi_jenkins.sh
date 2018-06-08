@@ -251,15 +251,16 @@ function mpi_runner()
 
     local has_yalla=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep yalla | wc -l)
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
+    local has_btl_openib=$($OMPI_HOME/bin/ompi_info --param btl all | grep openib | wc -l)
     for hca_dev in $(ibstat -l); do
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
+            mca="$common_mca -mca btl self -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
 
             echo "Running $exe_path ${exe_args}"
 
-            if [ "$btl_openib" == "yes" ]; then
+            if [ $has_btl_openib -gt 0 ] && [ "$btl_openib" == "yes" ] ; then
                 $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib ${AFFINITY} ${exe_path} ${exe_args}
                 if [ "$jenkins_test_xrc" = "yes" ] ; then
                     $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 \
@@ -337,7 +338,7 @@ function oshmem_runner()
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
             mca="$common_mca"
-            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
+            mca="$mca -mca btl self --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
             mca="$mca --mca rmaps_base_dist_hca $hca --mca sshmem_verbs_hca_name $hca"
             echo "Running $exe_path ${exe_args}"
 #            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${AFFINITY} ${exe_path} ${exe_args}
