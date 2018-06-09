@@ -256,7 +256,7 @@ function mpi_runner()
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl self -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
+            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
 
             echo "Running $exe_path ${exe_args}"
 
@@ -275,13 +275,13 @@ function mpi_runner()
 #            fi
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
-                $timeout_exe $mpirun -np $np $mca -mca pml ucx ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca btl self -mca pml ucx ${AFFINITY} ${exe_path} ${exe_args}
             fi
             if [ $has_yalla -gt 0 ]; then
-                $timeout_exe $mpirun -np $np $mca -mca pml yalla ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca btl self -mca pml yalla ${AFFINITY} ${exe_path} ${exe_args}
             fi
             if [ -n "$mpi_custom_args" ]; then
-                $timeout_exe $mpirun -np $np $mca $mpi_custome_args ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun -np $np $mca -mca btl self $mpi_custome_args ${AFFINITY} ${exe_path} ${exe_args}
             fi
         fi
     done
@@ -338,19 +338,19 @@ function oshmem_runner()
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
             mca="$common_mca"
-            mca="$mca -mca btl self --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
+            mca="$mca --mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
             mca="$mca --mca rmaps_base_dist_hca $hca --mca sshmem_verbs_hca_name $hca"
             echo "Running $exe_path ${exe_args}"
 #            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,openib    ${AFFINITY} ${exe_path} ${exe_args}
 #            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${AFFINITY} ${exe_path} ${exe_args}
-            $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla                       ${AFFINITY} ${exe_path} ${exe_args}
+            $timeout_exe $oshrun -np $np $mca $spml_ikrit -mca pml yalla -mca btl self         ${AFFINITY} ${exe_path} ${exe_args}
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
-                $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx -mca btl self ${AFFINITY} ${exe_path} ${exe_args}
             fi
 
             if [ -n "$oshmem_custom_args" ]; then
-                $timeout_exe $oshrun -np $np $mca $oshmem_custom_args ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $oshrun -np $np -mca btl self $mca $oshmem_custom_args ${AFFINITY} ${exe_path} ${exe_args}
             fi
         fi
     done
