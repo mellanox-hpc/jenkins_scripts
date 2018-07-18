@@ -256,7 +256,7 @@ function mpi_runner()
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca"
+            mca="$common_mca -mca btl_openib_if_include $hca -x MXM_RDMA_PORTS=$hca -x UCX_NET_DEVICES=$hca -mca btl_openib_allow_ib true"
 
             echo "Running $exe_path ${exe_args}"
 
