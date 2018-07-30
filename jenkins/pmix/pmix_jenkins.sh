@@ -446,42 +446,96 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
         autogen_done=1
     fi
 
-    # Test pmix/messaging
-    echo "--------------------------- Building with messages ----------------------------------------"
-    mkdir ${build_dir}
-    cd ${build_dir}
-    echo ${WORKSPACE}/configure --prefix=${pmix_dir} $configure_args --disable-visibility --disable-dstore | bash -xeE
-    make $make_opt install
-    echo "--------------------------- Checking with messages ----------------------------------------"
-    echo "Checking without dstor:" >> $run_tap
-    pmix_run_tests
-    rm -Rf ${pmix_dir} ${build_dir}
-    rc=$test_ret
+    if [ $pmix_ver -le 20 ]; then
+        # Test pmix/messaging
+        echo "--------------------------- Building with messages ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=${pmix_dir} $configure_args --disable-visibility --disable-dstore | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with messages ----------------------------------------"
+        echo "Checking without dstor:" >> $run_tap
+        pmix_run_tests
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$test_ret
 
+        # Test pmix/dstore/flock
+        echo "--------------------------- Building with dstore/flock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore --disable-dstore-pthlck | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/flock ----------------------------------------"
+        echo "Checking with dstor/flock:" >> $run_tap
+        pmix_run_tests
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
 
-    # Test pmix/dstore/flock
-    echo "--------------------------- Building with dstore/flock ----------------------------------------"
-    mkdir ${build_dir}
-    cd ${build_dir}
-    echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore --disable-dstore-pthlck | bash -xeE
-    make $make_opt install
-    echo "--------------------------- Checking with dstore/flock ----------------------------------------"
-    echo "Checking with dstor/flock:" >> $run_tap
-    pmix_run_tests
-    rm -Rf ${pmix_dir} ${build_dir}
-    rc=$((test_ret+rc))
+        # Test pmix/dstore/pthread-lock
+        echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
+        echo "Checking with dstor:" >> $run_tap
+        pmix_run_tests
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+    else
+        has_gds_ds21=0
+        # Test pmix/dstore/pthread-lock
+        echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
+        echo "----dstore/pthread-lock----" >> $run_tap
+        echo "Checking with ds12,hash:" >> $run_tap
+        export PMIX_MCA_gds=ds12,hash
+        pmix_run_tests
 
-    # Test pmix/dstore/pthread-lock
-    echo "--------------------------- Building with dstore/pthread-lock ----------------------------------------"
-    mkdir ${build_dir}
-    cd ${build_dir}
-    echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --enable-dstore | bash -xeE
-    make $make_opt install
-    echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
-    echo "Checking with dstor:" >> $run_tap
-    pmix_run_tests
-    rm -Rf ${pmix_dir} ${build_dir}
-    rc=$((test_ret+rc))
+        has_gds_ds21=$($pmix_dir/bin/pmix_info --param gds ds21 | wc -l)
+
+        if [ "$has_gds_ds21" -gt 0 ]; then
+            echo "Checking with ds21,hash:" >> $run_tap
+            export PMIX_MCA_gds=ds21,hash
+            pmix_run_tests
+            echo "Checking with auto gds:" >> $run_tap
+            export PMIX_MCA_gds=""
+            pmix_run_tests
+        fi
+
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+
+        # Test pmix/dstore/flock
+        echo "--------------------------- Building with dstore/flock ----------------------------------------"
+        mkdir ${build_dir}
+        cd ${build_dir}
+        echo ${WORKSPACE}/configure --prefix=$pmix_dir $configure_args --disable-visibility --disable-dstore-pthlck | bash -xeE
+        make $make_opt install
+        echo "--------------------------- Checking with dstore/flock ----------------------------------------"
+        echo "----dstore/flock----" >> $run_tap
+        echo "Checking with ds12,hash:" >> $run_tap
+        export PMIX_MCA_gds=ds12,hash
+        pmix_run_tests
+
+        has_gds_ds21=$($pmix_dir/bin/pmix_info --param gds ds21 | wc -l)
+
+        if [ "$has_gds_ds21" -gt 0 ]; then
+            echo "Checking with ds21,hash:" >> $run_tap
+            export PMIX_MCA_gds=ds21,hash
+            pmix_run_tests
+            echo "Checking with auto gds:" >> $run_tap
+            export PMIX_MCA_gds=""
+            pmix_run_tests
+        fi
+
+        rm -Rf ${pmix_dir} ${build_dir}
+        rc=$((test_ret+rc))
+    fi
 
     unset TMPDIR
     rmdir $OUTDIR
