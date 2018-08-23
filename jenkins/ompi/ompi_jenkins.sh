@@ -770,6 +770,12 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                     exe_path=${exe_dir}/$exe
                     (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshmem_runner 8 $exe_path)
                 done
+                if [ `which clang` ]; then
+                    if [ -f ${OMPI_HOME}/include/pshmem.h ]; then
+                        pshmem_enabled=-DENABLE_PSHMEM
+                    fi;
+                    clang ${abs_path}/c11_test.c -std=c11 ${pshmem_enabled} -o /tmp/c11_test -I${OMPI_HOME}/include -L${OMPI_HOME}/lib -loshmem
+                fi;
             fi
         fi
 
