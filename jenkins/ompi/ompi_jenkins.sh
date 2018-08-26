@@ -772,9 +772,10 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
                 done
                 if [ `which clang` ]; then
                     if [ -f ${OMPI_HOME}/include/pshmem.h ]; then
-                        pshmem_enabled=-DENABLE_PSHMEM
+                        pshmem_def=-DENABLE_PSHMEM
                     fi;
-                    clang ${abs_path}/c11_test.c -std=c11 ${pshmem_enabled} -o /tmp/c11_test -I${OMPI_HOME}/include -L${OMPI_HOME}/lib -loshmem
+                    clang ${abs_path}/c11_test.c -std=c11 ${pshmem_def} -o /tmp/c11_test \
+                          -I${OMPI_HOME}/include -L${OMPI_HOME}/lib -loshmem
                 fi;
             fi
         fi

@@ -6,7 +6,8 @@
 
 int main(int argc, char** argv)
 {
-#if (OSHMEM_MAJOR_VERSION * 100) + OSHMEM_MINOR_VERSION >= 400
+#if (defined(SHMEM_MAJOR_VERSION) && SHMEM_MAJOR_VERSION >= 1) && \
+    (defined(SHMEM_MINOR_VERSION) && SHMEM_MINOR_VERSION >= 4)
     char *char_ptr = 0;
     double *double_ptr = 0;
     int *int_ptr = 0;
