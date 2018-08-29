@@ -6,6 +6,7 @@
 
 int main(int argc, char** argv)
 {
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #if (defined(SHMEM_MAJOR_VERSION) && SHMEM_MAJOR_VERSION >= 1) && \
     (defined(SHMEM_MINOR_VERSION) && SHMEM_MINOR_VERSION >= 4)
     char *char_ptr = 0;
@@ -158,6 +159,7 @@ int main(int argc, char** argv)
 
     pshmem_wait_until(short_ptr, 0, 0);
     pshmem_test(int_ptr, 0, 0);
+#endif
 #endif
 #endif
     return 0;
