@@ -212,9 +212,9 @@ function pmix_run_tests()
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]" -o $OUTDIR/out'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:0]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]" -o $OUTDIR/out'
+    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:0]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
@@ -262,6 +262,7 @@ function pmix_run_tests()
     test_exec='./pmix_test -n 5 --test-resolve-peers --ns-dist "1:2:2" -o $OUTDIR/out'
     check_result "resolve peers" "$test_exec"
 
+
     if [ "$pmix_ver" -gt 11 ]; then
         # resolve peers from different namespaces.
         test_exec='./pmix_test -n 5 --test-replace 100:0,1,10,50,99 -o $OUTDIR/out'
@@ -270,6 +271,15 @@ function pmix_run_tests()
         # resolve peers from different namespaces.
         test_exec='./pmix_test -n 5 --test-internal 10 -o $OUTDIR/out'
         check_result "local store" "$test_exec"
+    fi
+    if [ "$pmix_ver" -ge 40 ]; then
+        # test direct modex
+        test_exec='./pmix_test -s 2 -n 2 --job-fence -o $OUTDIR/out'
+        check_result "direct modex" "$test_exec"
+
+        # test full modex
+        test_exec='./pmix_test -s 2 -n 2 --job-fence -c -o $OUTDIR/out'
+        check_result "full modex" "$test_exec"
     fi
 
     # run valgrind
