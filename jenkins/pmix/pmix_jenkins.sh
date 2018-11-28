@@ -175,7 +175,11 @@ function on_exit
 function check_out()
 {
     for out in `ls $OUTDIR/out.*`; do
-        status=`cat $out`
+        if [ "$pmix_ver" -ge 40 ]; then
+            status=`cat $out | awk '{print $2}'`
+        else
+            status=`cat $out`
+        fi
         echo "check file: $out: $status"
         if [ "$status" != "OK" ]; then
             test_ret=1
@@ -189,10 +193,10 @@ function check_result()
 {
     set +e
     eval $timeout_exe $2
-    ret=$?
+    test_ret=$?
     set -e
     check_out
-    if [ $ret -gt 0 ]; then
+    if [ $test_ret -gt 0 ]; then
         echo "not ok $test_id $1 ($2)" >> $run_tap
         test_ret=1
     else
@@ -212,10 +216,20 @@ function pmix_run_tests()
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:0]" -o $OUTDIR/out'
-    check_result "blocking fence w/ data all" "$test_exec"
-    test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:0]" -o $OUTDIR/out'
-    check_result "blocking fence w/ data all" "$test_exec"
+    if [ "$pmix_ver" -ge 40 ]; then
+        test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:0]" -o $OUTDIR/out'
+        # All nspaces should started from 0 rank.                         ^ here is 0 rank for the second nspace
+        check_result "blocking fence w/ data all" "$test_exec"
+        test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:0]" -o $OUTDIR/out'
+        check_result "blocking fence w/ data all" "$test_exec"
+    else 
+        # For old test version the rank counter for the second nspace may starts with not 0, 
+        # this case supports old versions
+        test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:3]" -o $OUTDIR/out'
+        check_result "blocking fence w/ data all" "$test_exec"
+        test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:3]" -o $OUTDIR/out'
+        check_result "blocking fence w/ data all" "$test_exec"
+    fi
     test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:;1:]" -o $OUTDIR/out'
     check_result "blocking fence w/ data all" "$test_exec"
 
