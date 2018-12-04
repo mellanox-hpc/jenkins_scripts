@@ -174,17 +174,18 @@ function on_exit
 
 function check_out()
 {
+    local ret=0
     for out in `ls $OUTDIR/out.*`; do
         if [ "$pmix_ver" -ge 40 ]; then
             status=`cat $out | awk '{print $2}'`
         else
             status=`cat $out`
         fi
-        echo "check file: $out: $status"
         if [ "$status" != "OK" ]; then
-            test_ret=1
+            ret=1
         fi
     done
+    echo $ret
 }
 
 # $1 - test name
@@ -193,10 +194,11 @@ function check_result()
 {
     set +e
     eval $timeout_exe $2
-    test_ret=$?
+    ret=$?
     set -e
-    check_out
-    if [ $test_ret -gt 0 ]; then
+    client_ret=$(check_out)
+    echo client_ret $client_ret
+    if [ $ret -gt 0 ] || [ $client_ret -gt 0 ]; then
         echo "not ok $test_id $1 ($2)" >> $run_tap
         test_ret=1
     else
