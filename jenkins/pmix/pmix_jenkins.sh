@@ -176,7 +176,7 @@ function check_out()
 {
     local ret=0
     for out in `ls $OUTDIR/out.*`; do
-        if [ "$pmix_ver" -ge 40 ]; then
+        if [ "$pmix_ver" -ge 31 ]; then
             status=`cat $out | awk '{print $2}'`
         else
             status=`cat $out`
@@ -218,7 +218,7 @@ function pmix_run_tests()
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
-    if [ "$pmix_ver" -ge 40 ]; then
+    if [ "$pmix_ver" -ge 31 ]; then
         test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:0]" -o $OUTDIR/out'
         # All nspaces should started from 0 rank.                         ^ here is 0 rank for the second nspace
         check_result "blocking fence w/ data all" "$test_exec"
