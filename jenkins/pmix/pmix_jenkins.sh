@@ -218,7 +218,7 @@ function pmix_run_tests()
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
-    if [ "$pmix_ver" -ge 31 ]; then
+    if [[ "$pmix_ver" -ge 30 || $pmix_ver -ge 21 ]]; then
         test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:0]" -o $OUTDIR/out'
         # All nspaces should started from 0 rank.                         ^ here is 0 rank for the second nspace
         check_result "blocking fence w/ data all" "$test_exec"
@@ -518,20 +518,23 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
         make $make_opt install
         echo "--------------------------- Checking with dstore/pthread-lock ----------------------------------------"
         echo "----dstore/pthread-lock----" >> $run_tap
-        echo "Checking with ds12,hash:" >> $run_tap
-        export PMIX_MCA_gds=ds12,hash
+
+        gds_list="hash ds12,hash"
+        # check the existence of ds21 component
+        has_gds_ds21=$($pmix_dir/bin/pmix_info --param gds ds21 | wc -l)
+        if [ "$has_gds_ds21" -gt 0 ]; then
+            gds_list="$gds_list ds21,hash"
+        fi
+
+        for gds in $gds_list; do
+            echo "Checking with $gds:" >> $run_tap
+            export PMIX_MCA_gds=$gds
+            pmix_run_tests
+        done
+        echo "Checking with auto gds:" >> $run_tap
+        export PMIX_MCA_gds=""
         pmix_run_tests
 
-        has_gds_ds21=$($pmix_dir/bin/pmix_info --param gds ds21 | wc -l)
-
-        if [ "$has_gds_ds21" -gt 0 ]; then
-            echo "Checking with ds21,hash:" >> $run_tap
-            export PMIX_MCA_gds=ds21,hash
-            pmix_run_tests
-            echo "Checking with auto gds:" >> $run_tap
-            export PMIX_MCA_gds=""
-            pmix_run_tests
-        fi
 
         rm -Rf ${pmix_dir} ${build_dir}
         rc=$((test_ret+rc))
@@ -544,20 +547,21 @@ if [ -n "$JENKINS_RUN_TESTS" -a "$JENKINS_RUN_TESTS" -ne "0" ]; then
         make $make_opt install
         echo "--------------------------- Checking with dstore/flock ----------------------------------------"
         echo "----dstore/flock----" >> $run_tap
-        echo "Checking with ds12,hash:" >> $run_tap
-        export PMIX_MCA_gds=ds12,hash
-        pmix_run_tests
 
-        has_gds_ds21=$($pmix_dir/bin/pmix_info --param gds ds21 | wc -l)
-
+        gds_list="hash ds12,hash"
+        # check the existence of ds21 component
         if [ "$has_gds_ds21" -gt 0 ]; then
-            echo "Checking with ds21,hash:" >> $run_tap
-            export PMIX_MCA_gds=ds21,hash
-            pmix_run_tests
-            echo "Checking with auto gds:" >> $run_tap
-            export PMIX_MCA_gds=""
-            pmix_run_tests
+            gds_list="$gds_list ds21,hash"
         fi
+
+        for gds in $gds_list; do
+            echo "Checking with $gds:" >> $run_tap
+            export PMIX_MCA_gds=$gds
+            pmix_run_tests
+        done
+        echo "Checking with auto gds:" >> $run_tap
+        export PMIX_MCA_gds=""
+        pmix_run_tests
 
         rm -Rf ${pmix_dir} ${build_dir}
         rc=$((test_ret+rc))
