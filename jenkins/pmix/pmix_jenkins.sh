@@ -218,7 +218,7 @@ function pmix_run_tests()
 
     test_id=1
     # 1 blocking fence with data exchange among all processes from two namespaces:
-    if [[ "$pmix_ver" -ge 30 || $pmix_ver -ge 21 ]]; then
+    if [ "$pmix_ver" -ge 12 ]; then
         test_exec='./pmix_test -n 4 --ns-dist 3:1 --fence "[db | 0:0-2;1:0]" -o $OUTDIR/out'
         # All nspaces should started from 0 rank.                         ^ here is 0 rank for the second nspace
         check_result "blocking fence w/ data all" "$test_exec"
