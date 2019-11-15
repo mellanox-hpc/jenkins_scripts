@@ -1,5 +1,10 @@
 #!/bin/bash -eEl
 
+# TODO:
+#   1. Check that yalla is not built
+#   2. Split the script into Jenkins pipeline stages (building, testing, coverity, etc.)
+
+
 if [ "$DEBUG" = "true" ]; then
     set -x
 fi
@@ -684,6 +689,10 @@ if [ -n "$jenkins_build_passed" ]; then
                 test_cov $cov_build_dir $cov_proj "make $make_cov_opt $make_opt all" $cov_directive
                 set -eE
             done
+
+            echo "INFO: Coverity scan status:"
+            cat ${cov_stat_tap}
+
             if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
                 echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
                 if [ "$jenkins_test_comments" = "yes" ]; then
