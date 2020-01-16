@@ -1,5 +1,6 @@
 ARG OMPI_CI_OS_NAME=centos
 ARG OMPI_CI_OS_VERSION=7.6.1810
+# 'rhel7.6' is used for centos 7.6
 ARG OMPI_CI_MOFED_OS=rhel7.6
 FROM ${OMPI_CI_OS_NAME}:${OMPI_CI_OS_VERSION}
 
@@ -35,7 +36,6 @@ RUN yum install -y \
 RUN echo "/hpc/local/etc/modulefiles" >> /usr/share/Modules/init/.modulespath
 
 ARG OMPI_CI_MOFED_VERSION=4.7-1.0.0.1
-# TODO: 'rhel7.6' is hardcoded for centos7
 ENV MOFED_DIR MLNX_OFED_LINUX-${OMPI_CI_MOFED_VERSION}-${OMPI_CI_MOFED_OS}-x86_64
 ENV MOFED_SITE_PLACE MLNX_OFED-${OMPI_CI_MOFED_VERSION}
 ENV MOFED_IMAGE MLNX_OFED_LINUX-${OMPI_CI_MOFED_VERSION}-${OMPI_CI_MOFED_OS}-x86_64.tgz

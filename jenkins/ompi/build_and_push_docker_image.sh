@@ -6,6 +6,7 @@
 OMPI_CI_OS_NAME=centos
 OMPI_CI_OS_VERSION=7.6.1810
 OMPI_CI_MOFED_VERSION=4.7-1.0.0.1
+# 'rhel7.6' is used for centos 7.6
 OMPI_CI_MOFED_OS=rhel7.6
 
 # For rDMZ zone only
