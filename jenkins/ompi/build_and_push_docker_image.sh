@@ -4,7 +4,7 @@
 #   Run the script under root/sudo or a user with the permissions for 'docker build'
 
 OMPI_CI_OS_NAME=centos
-OMPI_CI_OS_VERSION=7
+OMPI_CI_OS_VERSION=7.6.1810
 OMPI_CI_MOFED_VERSION=4.7-1.0.0.1
 
 # For rDMZ zone only
@@ -20,7 +20,7 @@ rm -rf ${TMP_DIR_DOCKER_BUILD_CONTEXT}
 mkdir -p ${TMP_DIR_DOCKER_BUILD_CONTEXT}
 
 docker build \
-  -f "${TOP_DIR}"/jenkins/ompi/Dockerfile.${OMPI_CI_OS_NAME}${OMPI_CI_OS_VERSION} \
+  -f "${TOP_DIR}"/jenkins/ompi/Dockerfile.${OMPI_CI_OS_NAME} \
   --no-cache \
   --network=host \
   --rm \

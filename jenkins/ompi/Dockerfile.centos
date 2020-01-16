@@ -1,5 +1,5 @@
 ARG OMPI_CI_OS_NAME=centos
-ARG OMPI_CI_OS_VERSION=7
+ARG OMPI_CI_OS_VERSION=7.6.1810
 FROM ${OMPI_CI_OS_NAME}:${OMPI_CI_OS_VERSION}
 
 RUN yum install -y \
@@ -40,7 +40,18 @@ ENV MOFED_SITE_PLACE MLNX_OFED-${OMPI_CI_MOFED_VERSION}
 ENV MOFED_IMAGE MLNX_OFED_LINUX-${OMPI_CI_MOFED_VERSION}-rhel7.6-x86_64.tgz
 RUN wget --no-verbose http://content.mellanox.com/ofed/${MOFED_SITE_PLACE}/${MOFED_IMAGE} && \
     tar -xzvf ${MOFED_IMAGE} && \
-    ${MOFED_DIR}/mlnxofedinstall --user-space-only --without-fw-update --all -q --skip-distro-check && \
+    ${MOFED_DIR}/mlnxofedinstall \
+        --user-space-only \
+        --without-fw-update \
+        --all \
+        -q \
+        --skip-distro-check \
+        --without-ucx \
+        --without-hcoll \
+        --without-mxm \
+        --without-openmpi \
+        --without-sharp \
+        && \
     cd .. && \
     rm -rf ${MOFED_DIR} && \
     rm -rf *.tgz
