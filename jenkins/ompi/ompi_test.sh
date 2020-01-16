@@ -1,5 +1,29 @@
-#!/bin/bash -xeE
-export PATH=/hpc/local/bin::/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
+#!/bin/bash -eEl
+
+# TODO:
+#   1. Check that yalla is not built
+
+if [ "$DEBUG" = "true" ]; then
+    set -x
+fi
+
+# Check that you are inside a docker container
+cat /proc/1/cgroup
+
+# prepare to run from command line w/o jenkins
+if [ -z "$WORKSPACE" ]; then
+    echo "WARNING: WORKSPACE is not defined"
+    WORKSPACE=$PWD
+    JOB_URL=$WORKSPACE
+    BUILD_NUMBER=1
+    JENKINS_RUN_TESTS=yes
+    NOJENKINS=${NOJENKINS:="yes"}
+    ghprbTargetBranch=${ghprbTargetBranch:="mellanox-v1.8"}
+fi
+
+cd $WORKSPACE
+
+export PATH=/hpc/local/bin:/usr/local/bin:/bin:/usr/bin:/usr/sbin:${PATH}
 
 help_txt_list=${help_txt_list:="oshmem ompi/mca/coll/hcoll ompi/mca/pml/yall ompi/mca/pml/ucx ompi/mca/spml/ucx"}
 hca_port=${hca_port:=1}
@@ -11,7 +35,7 @@ jenkins_test_check=${jenkins_test_check:="yes"}
 jenkins_test_src_rpm=${jenkins_test_src_rpm:="yes"}
 jenkins_test_help_txt=${jenkins_test_help_txt:="no"}
 jenkins_test_threads=${jenkins_test_threads:="yes"}
-jenkins_test_cov=${jenkins_test_cov:="yes"}
+jenkins_test_cov=${jenkins_test_cov:="no"}
 jenkins_test_known_issues=${jenkins_test_known_issues:="no"}
 jenkins_test_all=${jenkins_test_all:="no"}
 jenkins_test_debug=${jenkins_test_debug:="no"}
@@ -31,9 +55,16 @@ jenkins_test_hcoll="no"
 # do that itself
 jenkins_session_base=`mktemp -d`
 function jenkins_cleanup {
-  echo "Script exited with code = $?"
+  EXIT_CODE=$?
+  echo "Script exited with code = ${EXIT_CODE}"
   rm -rf "$jenkins_session_base"
   echo "rm -rf ... returned $?"
+  if [ "${EXIT_CODE}" -eq 0 ]; then
+    echo "PASS"
+  else
+    echo "FAIL"
+  fi
+  exit ${EXIT_CODE}
 }
 trap jenkins_cleanup EXIT
 export OMPI_MCA_orte_tmpdir_base=$jenkins_session_base
@@ -44,7 +75,7 @@ else
     AFFINITY_GLOB=""
 fi
 
-if [ ! -d "ompi/mca/pml/ucx" ]; then
+if [ ! -d "$WORKSPACE/ompi/mca/pml/ucx" ]; then
     jenkins_test_ucx="no"
 fi
 
@@ -89,18 +120,6 @@ if [ -d "opal/mca/hwloc/hwloc" ]; then
     done
 fi
 
-# prepare to run from command line w/o jenkins
-if [ -z "$WORKSPACE" ]; then
-    WORKSPACE=$PWD
-    JOB_URL=$WORKSPACE
-    BUILD_NUMBER=1
-    JENKINS_RUN_TESTS=yes
-    NOJENKINS=${NOJENKINS:="yes"}
-    ghprbTargetBranch=${ghprbTargetBranch:="mellanox-v1.8"}
-fi
-
-cd $WORKSPACE
-
 gh_cov_msg="$WORKSPACE/cov_file_${BUILD_NUMBER}.txt"
 OMPI_HOME1=$WORKSPACE/ompi_install1
 ompi_home_list="$OMPI_HOME1"
@@ -121,7 +140,7 @@ function check_commands
     for pat in $(echo $test_list); do
         echo -n "checking $pat "
         if [[ $cmd =~ jenkins\:.*no${pat}.* ]]; then
-            echo disabling 
+            echo disabling
             eval "jenkins_test_${pat}=no"
         elif [[ $cmd =~ jenkins\:.*${pat}.* ]]; then
             echo enabling
@@ -178,7 +197,7 @@ fi
 
 # check for jenkins command in PR last comment
 if [ -n "$ghprbPullLink" ]; then
-    set +xeE
+    set +eE
     pr_url=$(echo $ghprbPullLink | sed -e s,github.com,api.github.com/repos,g -e s,pull,issues,g)
     pr_url="${pr_url}/comments"
     pr_file="$WORKSPACE/github_pr_${ghprbPullId}.json"
@@ -192,7 +211,7 @@ if [ -n "$ghprbPullLink" ]; then
     if [ -n "$pr_comments" ]; then
         check_commands "$pr_comments"
     fi
-    set -xeE
+    set -eE
 fi
 
 
@@ -391,15 +410,12 @@ function on_start()
     echo $distro_name -- $distro_ver
 
     # save current environment to support debugging
-    set +x
     env| sed -ne "s/\(\w*\)=\(.*\)\$/export \1='\2'/p" > $WORKSPACE/test_env.sh
     chmod 755 $WORKSPACE/test_env.sh
-    set -x
 }
 
 function on_exit
 {
-    set +x
     rc=$((rc + $?))
     echo exit code=$rc
     if [ $rc -ne 0 ]; then
@@ -549,11 +565,15 @@ function test_mindist()
         if [ $val -gt 0 ]; then
             for hca_dev in $(ibstat -l); do
                 var=$(cat /sys/class/infiniband/${hca_dev}/device/numa_node)
+                if [ "$var" = "-1" ]; then
+                    echo "WARNING: NUMA is not enabled or not available on the test host. Skipping test_mindist"
+                    continue
+                fi
                 export TEST_CLOSEST_NUMA=$var
-                $OMPI_HOME/bin/mpirun $mca -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
+                $OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun $mca -np 8 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -564,11 +584,15 @@ function test_mindist()
         else
             for hca_dev in $(ibstat -l); do
                 var=$(cat /sys/class/infiniband/${hca_dev}/device/numa_node)
+                if [ "$var" = "-1" ]; then
+                    echo "WARNING: NUMA is not enabled or not available on the test host. Skipping test_mindist"
+                    continue
+                fi
                 export TEST_CLOSEST_NUMA=$var
-                $OMPI_HOME/bin/mpirun -np 8 $mca --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
+                $OMPI_HOME/bin/mpirun -np 4 $mca --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun $mca -np 8 --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -582,7 +606,7 @@ function test_mindist()
 }
 
 
-trap "on_exit" INT TERM ILL KILL FPE SEGV ALRM
+trap "on_exit" INT TERM ILL FPE SEGV ALRM
 
 on_start
 
@@ -623,12 +647,12 @@ if [ "$jenkins_test_build" = "yes" ]; then
         export ucx_dir=$HPCX_UCX_DIR
     fi
 
-    rm -rf $ompi_home_list 
+    rm -rf $ompi_home_list
 
     # build ompi
-    $autogen_script 
-    echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE 
-    make $make_opt install 
+    $autogen_script
+    echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE
+    make $make_opt install
     jenkins_build_passed=1
 
     # make check
@@ -674,6 +698,10 @@ if [ -n "$jenkins_build_passed" ]; then
                 test_cov $cov_build_dir $cov_proj "make $make_cov_opt $make_opt all" $cov_directive
                 set -eE
             done
+
+            echo "INFO: Coverity scan status:"
+            cat ${cov_stat_tap}
+
             if [ -n "$ghprbPullId" -a -f "$gh_cov_msg" ]; then
                 echo "* Coverity report at $cov_url_webroot" >> $gh_cov_msg
                 if [ "$jenkins_test_comments" = "yes" ]; then
@@ -689,8 +717,8 @@ fi
 if [ "$jenkins_test_src_rpm" = "yes" ]; then
 
     # check distclean
-    make $make_opt distclean 
-    $autogen_script 
+    make $make_opt distclean
+    $autogen_script
     echo ./configure $configure_args --prefix=$OMPI_HOME1 | bash -xeE || exit 11
 
     if [ -x /usr/bin/dpkg-buildpackage ]; then
@@ -708,7 +736,7 @@ if [ "$jenkins_test_src_rpm" = "yes" ]; then
         make_dist_args="--highok --distdir $tarball_dir --greekonly"
 
         for arg in no-git-update dirtyok verok; do
-            if grep $arg contrib/dist/make_tarball 2>&1 > /dev/null; then 
+            if grep $arg contrib/dist/make_tarball 2>&1 > /dev/null; then
                 make_dist_args="$make_dist_args --${arg}"
             fi
         done
@@ -748,26 +776,26 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
     for OMPI_HOME in $(echo $ompi_home_list); do
 
-        if [ "$jenkins_test_examples" = "yes" ]; then 
+        if [ "$jenkins_test_examples" = "yes" ]; then
             exe_dir=$OMPI_HOME/examples
-            if [ ! -d "$exe_dir" ]; then 
+            if [ ! -d "$exe_dir" ]; then
                 echo "Running examples for $OMPI_HOME"
                 cp -prf ${WORKSPACE}/examples $OMPI_HOME
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH make -C $exe_dir all)
             fi
-            for exe in hello_c ring_c; do 
+            for exe in hello_c ring_c; do
                 exe_path=${exe_dir}/$exe
-                (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 8 $exe_path)
+                (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner 4 $exe_path)
                 # launch using slurm launcher in case mpi is configured with pmi support
                 if [ "$jenkins_test_slurm" = "yes" ]; then
                     (slurm_runner 2 $exe_path)
                 fi
             done
 
-            if [ "$jenkins_test_oshmem" = "yes" ]; then 
-                for exe in hello_oshmem oshmem_circular_shift oshmem_shmalloc oshmem_strided_puts oshmem_symmetric_data; do 
+            if [ "$jenkins_test_oshmem" = "yes" ]; then
+                for exe in hello_oshmem oshmem_circular_shift oshmem_shmalloc oshmem_strided_puts oshmem_symmetric_data; do
                     exe_path=${exe_dir}/$exe
-                    (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshmem_runner 8 $exe_path)
+                    (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH oshmem_runner 4 $exe_path)
                 done
                 if [ `which clang` ]; then
                     if [ -f ${OMPI_HOME}/include/pshmem.h ]; then
@@ -779,9 +807,9 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             fi
         fi
 
-        if [ "$jenkins_test_threads" = "yes" ]; then 
+        if [ "$jenkins_test_threads" = "yes" ]; then
             exe_dir=$OMPI_HOME/thread_tests
-            if [ ! -d "$exe_dir" ]; then 
+            if [ ! -d "$exe_dir" ]; then
                 pushd .
                 mkdir -p $exe_dir
                 cd $exe_dir
@@ -797,7 +825,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             fi
 
             # disabling btls which known to fail with threads
-            if [ "$jenkins_test_known_issues" == "no" ]; then 
+            if [ "$jenkins_test_known_issues" == "no" ]; then
                 btl_tcp=no
                 btl_vader=no
             fi
@@ -809,11 +837,11 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             btl_sm=no
             jenkins_test_ucx_bak=$jenkins_test_ucx
             jenkins_test_ucx=no
-            for exe in overlap latency; do 
+            for exe in overlap latency; do
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 4 $exe_path)
             done
-            for exe in latency_th bw_th message_rate_th; do 
+            for exe in latency_th bw_th message_rate_th; do
                 exe_path=${exe_dir}/thread-tests-1.1/$exe
                 (PATH=$OMPI_HOME/bin:$PATH LD_LIBRARY_PATH=$OMPI_HOME/lib:$LD_LIBRARY_PATH mpi_runner --no-bind 2 $exe_path 4)
             done
@@ -824,7 +852,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
             btl_vader=$btl_vader_bkp
         fi
 
-        if [ "$jenkins_test_vg" = "yes" ]; then 
+        if [ "$jenkins_test_vg" = "yes" ]; then
 
             module load dev/mofed_valgrind
             module load tools/valgrind
