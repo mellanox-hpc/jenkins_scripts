@@ -256,7 +256,7 @@ function mpi_runner()
     local mca="$common_mca"
 
     if [ "$btl_tcp" == "yes" ]; then
-        $timeout_exe $mpirun --np $np $mca --mca pml ob1 -mca btl self,tcp ${AFFINITY} ${exe_path} ${exe_args}
+        $timeout_exe $mpirun --np $np $mca --mca pml ob1 --mca btl self,tcp ${AFFINITY} ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_sm" == "yes" ]; then
@@ -508,21 +508,21 @@ function test_tune()
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (1+2+3+4+5)*2=30
         if [ $val -ne 30 ]; then
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         val=$($OMPI_HOME/bin/mpirun $mca -np 2 --tune $WORKSPACE/test_tune.conf  --mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (7+8+3+4+5)*2=54
         if [ $val -ne 54 ]; then
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (1+2+3+4+5)*2=30
@@ -530,9 +530,9 @@ function test_tune()
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf --mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (9+10+3+4+5)*2=62
         if [ $val -ne 62 ]; then
             exit 1
@@ -573,7 +573,7 @@ function test_mindist()
                 $OMPI_HOME/bin/mpirun $mca --np 4 --map-by dist --mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist --mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun $mca --np 4 --map-by dist --mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
