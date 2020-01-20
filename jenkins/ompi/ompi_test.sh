@@ -237,7 +237,7 @@ function mpi_runner()
     local np=$1
     local exe_path="$2"
     local exe_args=${3}
-    local common_mca="-bind-to none -mca orte_tmpdir_base $jenkins_session_base"
+    local common_mca="--bind-to none --mca orte_tmpdir_base $jenkins_session_base"
     local mpirun="$OMPI_HOME/bin/mpirun"
 
     local has_timeout=$($OMPI_HOME/bin/mpirun --help | grep timeout | wc -l)
@@ -251,20 +251,20 @@ function mpi_runner()
     fi
 
     if [ "$jenkins_test_hcoll" = "no" ]; then
-        common_mca="$common_mca -mca coll ^hcoll"
+        common_mca="$common_mca --mca coll ^hcoll"
     fi
     local mca="$common_mca"
 
     if [ "$btl_tcp" == "yes" ]; then
-        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,tcp ${AFFINITY} ${exe_path} ${exe_args}
+        $timeout_exe $mpirun --np $np $mca --mca pml ob1 --mca btl self,tcp ${AFFINITY} ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_sm" == "yes" ]; then
-        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,sm ${AFFINITY} ${exe_path} ${exe_args}
+        $timeout_exe $mpirun --np $np $mca --mca pml ob1 --mca btl self,sm ${AFFINITY} ${exe_path} ${exe_args}
     fi
 
     if [ "$btl_vader" == "yes" ]; then
-        $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,vader ${AFFINITY} ${exe_path} ${exe_args}
+        $timeout_exe $mpirun --np $np $mca --mca pml ob1 --mca btl self,vader ${AFFINITY} ${exe_path} ${exe_args}
     fi
 
 
@@ -275,14 +275,14 @@ function mpi_runner()
 
         if [ -f "$exe_path" ]; then
             local hca="${hca_dev}:${hca_port}"
-            mca="$common_mca -mca btl_openib_if_include $hca -x UCX_NET_DEVICES=$hca -mca btl_openib_allow_ib true"
+            mca="$common_mca --mca btl_openib_if_include $hca -x UCX_NET_DEVICES=$hca --mca btl_openib_allow_ib true"
 
             echo "Running $exe_path ${exe_args}"
 
             if [ $has_btl_openib -gt 0 ] && [ "$btl_openib" == "yes" ] ; then
-                $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun --np $np $mca --mca pml ob1 --mca btl self,openib ${AFFINITY} ${exe_path} ${exe_args}
                 if [ "$jenkins_test_xrc" = "yes" ] ; then
-                    $timeout_exe $mpirun -np $np $mca -mca pml ob1 -mca btl self,openib -mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 \
+                    $timeout_exe $mpirun --np $np $mca --mca pml ob1 --mca btl self,openib --mca btl_openib_receive_queues X,4096,1024:X,12288,512:X,65536,512 \
                         ${AFFINITY} ${exe_path} ${exe_args}
                 fi
             fi
@@ -294,13 +294,13 @@ function mpi_runner()
 #            fi
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
-                $timeout_exe $mpirun -np $np $mca -mca btl self -mca pml ucx ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun --np $np $mca --mca btl self --mca pml ucx ${AFFINITY} ${exe_path} ${exe_args}
             fi
             if [ $has_yalla -gt 0 ]; then
-                $timeout_exe $mpirun -np $np $mca -mca btl self -mca pml yalla ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun --np $np $mca --mca btl self --mca pml yalla ${AFFINITY} ${exe_path} ${exe_args}
             fi
             if [ -n "$mpi_custom_args" ]; then
-                $timeout_exe $mpirun -np $np $mca -mca btl self $mpi_custome_args ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $mpirun --np $np $mca --mca btl self $mpi_custome_args ${AFFINITY} ${exe_path} ${exe_args}
             fi
         fi
     done
@@ -322,7 +322,7 @@ function oshmem_runner()
     local spml_ikrit="--mca spml ikrit"
     local spml_ucx="--mca spml ucx"
     local oshrun="$OMPI_HOME/bin/oshrun"
-    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=256M -mca orte_tmpdir_base $jenkins_session_base"
+    local common_mca="--bind-to none -x SHMEM_SYMMETRIC_HEAP_SIZE=256M --mca orte_tmpdir_base $jenkins_session_base"
 
     local has_ucx=$($OMPI_HOME/bin/ompi_info --param pml all --level 9 | grep ucx | wc -l)
 
@@ -337,7 +337,7 @@ function oshmem_runner()
     fi
 
     if [ "$jenkins_test_hcoll" = "no" ]; then
-        common_mca="$common_mca -mca coll ^hcoll"
+        common_mca="$common_mca --mca coll ^hcoll"
     fi
 
 
@@ -364,11 +364,11 @@ function oshmem_runner()
 #            $timeout_exe $oshrun -np $np $mca $spml_yoda  -mca pml ob1 -mca btl self,sm,openib ${AFFINITY} ${exe_path} ${exe_args}
 
             if [ "$jenkins_test_ucx" = "yes" -a $has_ucx -gt 0 -a "$hca_dev" != "mlx4_0" ]; then
-                $timeout_exe $oshrun -np $np $mca $spml_ucx -mca pml ucx -mca btl self ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $oshrun --np $np $mca $spml_ucx --mca pml ucx --mca btl self ${AFFINITY} ${exe_path} ${exe_args}
             fi
 
             if [ -n "$oshmem_custom_args" ]; then
-                $timeout_exe $oshrun -np $np -mca btl self $mca $oshmem_custom_args ${AFFINITY} ${exe_path} ${exe_args}
+                $timeout_exe $oshrun --np $np --mca btl self $mca $oshmem_custom_args ${AFFINITY} ${exe_path} ${exe_args}
             fi
         fi
     done
@@ -474,19 +474,19 @@ function test_tune()
     echo "check if mca_base_env_list parameter is supported in $OMPI_HOME"
     val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_env_list | wc -l)
 
-    mca="-mca pml ob1 -mca btl self,vader"
+    mca="--mca pml ob1 --mca btl self,vader"
 
     if [ $val -gt 0 ]; then
         echo "test mca_base_env_list option in $OMPI_HOME"
         export XXX_C=3 XXX_D=4 XXX_E=5
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -mca mca_base_env_list 'XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E' env|grep ^XXX_|wc -l)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --mca mca_base_env_list 'XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E' env|grep ^XXX_|wc -l)
         if [ $val -ne 10 ]; then
             exit 1
         fi
 
         # check amca param
         echo "mca_base_env_list=XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E" > $WORKSPACE/test_amca.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 --tune $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_amca.conf $abs_path/env_mpi |grep ^XXX_|wc -l)
         if [ $val -ne 10 ]; then
             exit 1
         fi
@@ -502,37 +502,37 @@ function test_tune()
         # 1. cut all patterns XXX_.*= from the begining of each line, only values of env vars remain.
         # 2. replace \n by + at each line
         # 3. sum all values of env vars with given pattern.
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -tune $WORKSPACE/test_tune.conf -x XXX_A=6 $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf -x XXX_A=6 $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (6+2+3+4+5)*2=40
         if [ $val -ne 40 ]; then
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (1+2+3+4+5)*2=30
         if [ $val -ne 30 ]; then
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -tune $WORKSPACE/test_tune.conf  -mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        val=$($OMPI_HOME/bin/mpirun $mca -np 2 --tune $WORKSPACE/test_tune.conf  --mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (7+8+3+4+5)*2=54
         if [ $val -ne 54 ]; then
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (1+2+3+4+5)*2=30
         if [ $val -ne 30 ]; then
             exit 1
         fi
 
-        echo "-mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
+        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -tune $WORKSPACE/test_tune.conf -am $WORKSPACE/test_amca.conf -mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf --mca mca_base_env_list "XXX_A=9;XXX_B=10" $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (9+10+3+4+5)*2=62
         if [ $val -ne 62 ]; then
             exit 1
@@ -540,7 +540,7 @@ function test_tune()
 
         echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
         echo "-x XXX_B=9 -x XXX_E" > $WORKSPACE/test_tune2.conf
-        val=$($OMPI_HOME/bin/mpirun $mca -np 2 -tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (6+9+7+8+5)*2=70
         if [ $val -ne 70 ]; then
             exit 1
@@ -556,7 +556,7 @@ function test_mindist()
     export TEST_PHYS_ID_COUNT=$var
     var=$(grep "core id" /proc/cpuinfo | sort | uniq | wc -l)
     export TEST_CORE_ID_COUNT=$var
-    mca="-mca pml ob1 -mca btl self,vader"
+    mca="--mca pml ob1 --mca btl self,vader"
     set +e
     if [ $val -gt 0 ]; then
         echo "test the dist mapping policy in $OMPI_HOME"
@@ -570,10 +570,10 @@ function test_mindist()
                     continue
                 fi
                 export TEST_CLOSEST_NUMA=$var
-                $OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
+                $OMPI_HOME/bin/mpirun $mca --np 4 --map-by dist --mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist -mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun $mca --np 4 --map-by dist --mca rmaps_dist_device ${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -589,10 +589,10 @@ function test_mindist()
                     continue
                 fi
                 export TEST_CLOSEST_NUMA=$var
-                $OMPI_HOME/bin/mpirun -np 4 $mca --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
+                $OMPI_HOME/bin/mpirun --np 4 $mca --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test
                 val=$?
                 if [ $val -ne 0 ]; then
-                    val=$($OMPI_HOME/bin/mpirun $mca -np 4 --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
+                    val=$($OMPI_HOME/bin/mpirun $mca --np 4 --map-by dist:${hca_dev} -x TEST_CLOSEST_NUMA -x TEST_PHYS_ID_COUNT -x TEST_CORE_ID_COUNT $abs_path/mindist_test 2>&1 | grep Skip | wc -l)
                     if [ $val -gt 0 ]; then
                         echo "Test for the dist mapping policy was incorrectly launched or BIOS doesn't provide necessary information."
                     else
@@ -860,7 +860,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             exe_dir=$OMPI_HOME/examples
             vg_opt="--suppressions=$OMPI_HOME/share/openmpi/openmpi-valgrind.supp --suppressions=$abs_path/vg.supp --error-exitcode=3 --track-origins=yes -q"
-            mpi_opt="-mca coll ^hcoll -np 1"
+            mpi_opt="--mca coll ^hcoll --np 1"
 
             mpi_exe=$OMPI_HOME/examples/hello_c
             shmem_exe=$OMPI_HOME/examples/oshmem_shmalloc
@@ -874,7 +874,7 @@ if [ -n "$JENKINS_RUN_TESTS" ]; then
 
             UCX_VG="$HPCX_UCX_DIR/debug/lib/libucp.so:$HPCX_UCX_DIR/debug/lib/libucm.so:$HPCX_UCX_DIR/debug/lib/libucs.so:$HPCX_UCX_DIR/debug/lib/libuct.so"
 
-            $mpirun $mpi_opt -mca pml ob1    -mca btl self,vader valgrind $vg_opt $mpi_exe
+            $mpirun $mpi_opt --mca pml ob1    --mca btl self,vader valgrind $vg_opt $mpi_exe
 #            $oshrun $mpi_opt -mca spml yoda  -mca pml ob1 -mca btl self,sm valgrind $vg_opt $shmem_exe
             #$oshrun $mpi_opt -mca spml ucx   -mca pml ucx   -x UCX_NET_DEVICES=mlx5_0:1 -x LD_PRELOAD=$UCX_VG valgrind $vg_opt $shmem_exe
 
