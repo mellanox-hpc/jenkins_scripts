@@ -497,7 +497,7 @@ function test_tune()
     val=$($OMPI_HOME/bin/ompi_info --param mca base --level 9 | grep mca_base_envar_file_prefix | wc -l)
     if [ $val -gt 0 ]; then
         echo "test -tune option in $OMPI_HOME"
-        echo "-x XXX_A=1   -x   XXX_B = 2 -x XXX_C -x XXX_D -x XXX_E" > $WORKSPACE/test_tune.conf
+        echo "-x XXX_A=1   -x   XXX_B=2 -x XXX_C -x XXX_D -x XXX_E" > $WORKSPACE/test_tune.conf
         # next line with magic sed operation does the following:
         # 1. cut all patterns XXX_.*= from the begining of each line, only values of env vars remain.
         # 2. replace \n by + at each line
