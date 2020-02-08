@@ -503,6 +503,10 @@ function test_tune()
         # 2. replace \n by + at each line
         # 3. sum all values of env vars with given pattern.
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf -x XXX_A=6 $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # precedence goes left-to-right.
+        # A is set to 1 in "tune" and then reset to 6 with the -x option
+        # B is set to 2 in "tune"
+        # C, D, E are taken from the environment as 3,4,5
         # return (6+2+3+4+5)*2=40
         if [ $val -ne 40 ]; then
             exit 1
@@ -510,6 +514,10 @@ function test_tune()
 
         echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # precedence goes left-to-right.
+        # A is set to 1 in "tune"
+        # B is set to 2 in "tune"
+        # C, D, E are taken from the environment as 3,4,5
         # return (1+2+3+4+5)*2=30
         if [ $val -ne 30 ]; then
             exit 1
@@ -517,6 +525,10 @@ function test_tune()
 
         echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         val=$($OMPI_HOME/bin/mpirun $mca -np 2 --tune $WORKSPACE/test_tune.conf  --mca mca_base_env_list "XXX_A=7;XXX_B=8"  $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # precedence goes left-to-right.
+        # A is set to 1 in "tune", and then reset to 7 in the --mca parameter
+        # B is set to 2 in "tune", and then reset to 8 in the --mca parameter
+        # C, D, E are taken from the environment as 3,4,5
         # return (7+8+3+4+5)*2=54
         if [ $val -ne 54 ]; then
             exit 1
@@ -525,8 +537,12 @@ function test_tune()
         echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-        # return (1+2+3+4+5)*2=30
-        if [ $val -ne 30 ]; then
+        # precedence goes left-to-right.
+        # A is first set to 1 in "tune", and then reset to 7 in "amca".
+        # B is first set to 2 in "tune", but then reset to 8 in "amca"
+        # C, D, E are taken from the environment as 3,4,5
+        # return (7+8+3+4+5)*2=54
+        if [ $val -ne 54 ]; then
             exit 1
         fi
 
@@ -541,6 +557,12 @@ function test_tune()
         echo "-x XXX_A=6 -x XXX_C=7 -x XXX_D=8" > $WORKSPACE/test_tune.conf
         echo "-x XXX_B=9 -x XXX_E" > $WORKSPACE/test_tune2.conf
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf,$WORKSPACE/test_tune2.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
+        # precedence goes left-to-right.
+        # A is set to 6 in "tune"
+        # B is set to 9 in "tune2"
+        # C is set to 7 in "tune"
+        # D is set to 8 in "tune"
+        # E is taken from the environment as 5
         # return (6+9+7+8+5)*2=70
         if [ $val -ne 70 ]; then
             exit 1
