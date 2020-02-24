@@ -537,12 +537,12 @@ function test_tune()
         echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > $WORKSPACE/test_tune.conf
         echo "mca_base_env_list=XXX_A=7;XXX_B=8" > $WORKSPACE/test_amca.conf
         val=$($OMPI_HOME/bin/mpirun $mca --np 2 --tune $WORKSPACE/test_tune.conf --am $WORKSPACE/test_amca.conf $abs_path/env_mpi | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-        # precedence goes left-to-right.
-        # A is first set to 1 in "tune", and then reset to 7 in "amca".
-        # B is first set to 2 in "tune", but then reset to 8 in "amca"
+        # precedence goes right-to-left (changed in master to correct left-to-right).
+        # A is first set to 7 in "amca", and then reset to 1 in "tune".
+        # B is first set to 8 in "amca", but then reset to 2 in "tune"
         # C, D, E are taken from the environment as 3,4,5
-        # return (7+8+3+4+5)*2=54
-        if [ $val -ne 54 ]; then
+        # return (1+2+3+4+5)*2=30
+        if [ $val -ne 30 ]; then
             exit 1
         fi
 
