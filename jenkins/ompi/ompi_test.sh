@@ -26,7 +26,7 @@ ci_test_build=${ci_test_build:="yes"}
 ci_test_examples=${ci_test_examples:="yes"}
 ci_test_oshmem=${ci_test_oshmem:="yes"}
 ci_test_check=${ci_test_check:="yes"}
-ci_test_threads=${ci_test_threads:="yes"}
+ci_test_threads=${ci_test_threads:="no"}
 ci_test_use_ucx_branch=${ci_test_use_ucx_branch:="no"}
 ci_test_ucx_branch=${ci_test_ucx_branch:="master"}
 ci_test_hcoll=${ci_test_hcoll:="yes"}
