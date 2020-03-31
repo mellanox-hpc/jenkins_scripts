@@ -292,24 +292,39 @@ function test_tune()
             exit 1
         fi
 
-        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > "$WORKSPACE/test_tune.conf"
-        echo "mca_base_env_list=XXX_A=7;XXX_B=8" > "$WORKSPACE/test_amca.conf"
+        # echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > "$WORKSPACE/test_tune.conf"
+        # echo "mca_base_env_list=XXX_A=7;XXX_B=8" > "$WORKSPACE/test_amca.conf"
+        # A is first set to 1 in "tune", and then reset to 7 in "amca".  <==== this is NOT allowed
+        # B is first set to 2 in "tune", but then reset to 8 in "amca"   <==== this is NOT allowed
+        #
+        # REPLACEMENT:
+        # A is set to 7 in "tune"
+        # B is set to 8 in "amca"
+        # C, D, E are taken from the environment as 3,4,5
+        # return (7+8+3+4+5)*2=54
+        echo "--mca mca_base_env_list \"XXX_A=7;XXX_C;XXX_D;XXX_E\"" > "$WORKSPACE/test_tune.conf"
+        echo "mca_base_env_list=XXX_B=8" > "$WORKSPACE/test_amca.conf"
         # shellcheck disable=SC2086
         val=$("${OMPI_HOME}/bin/mpirun" $mca --np 2 --tune "$WORKSPACE/test_tune.conf" \
             --am "$WORKSPACE/test_amca.conf" "${abs_path}/env_mpi" | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
-        # precedence goes left-to-right.
-        # A is first set to 1 in "tune", and then reset to 7 in "amca".
-        # B is first set to 2 in "tune", but then reset to 8 in "amca"
-        # C, D, E are taken from the environment as 3,4,5
-        # return (7+8+3+4+5)*2=54
         if [ "$val" -ne 54 ]
         then
             exit 1
         fi
 
-        echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > "$WORKSPACE/test_tune.conf"
-        echo "mca_base_env_list=XXX_A=7;XXX_B=8" > "$WORKSPACE/test_amca.conf"
+        # echo "--mca mca_base_env_list \"XXX_A=1;XXX_B=2;XXX_C;XXX_D;XXX_E\"" > "$WORKSPACE/test_tune.conf"
+        # echo "mca_base_env_list=XXX_A=7;XXX_B=8" > "$WORKSPACE/test_amca.conf"
+        # A is first set to 1 in "tune", and then reset to 7 by "amca".  <==== this is NOT allowed
+        # B is first set to 2 in "tune", but then reset to 8 in "amca"   <==== this is NOT allowed
+        #
+        # REPLACEMENT:
+        # A is set to 7 in "tune", and then reset to 9 on the cmd line
+        # B is set to 8 in "amca", and then reset to 10 on the cmd line
+        # C, D, E are taken from the environment as 3,4,5
+        #
         # shellcheck disable=SC2086
+        echo "--mca mca_base_env_list \"XXX_A=7;XXX_C;XXX_D;XXX_E\"" > "$WORKSPACE/test_tune.conf"
+        echo "mca_base_env_list=XXX_B=8" > "$WORKSPACE/test_amca.conf"
         val=$("${OMPI_HOME}/bin/mpirun" $mca --np 2 --tune "$WORKSPACE/test_tune.conf" --am "$WORKSPACE/test_amca.conf" \
             --mca mca_base_env_list "XXX_A=9;XXX_B=10" "${abs_path}/env_mpi" | sed -n -e 's/^XXX_.*=//p' | sed -e ':a;N;$!ba;s/\n/+/g' | bc)
         # return (9+10+3+4+5)*2=62
