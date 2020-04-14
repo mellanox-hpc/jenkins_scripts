@@ -4,6 +4,8 @@ ARG OMPI_CI_OS_VERSION=7.6.1810
 ARG OMPI_CI_MOFED_OS=rhel7.6
 FROM ${OMPI_CI_OS_NAME}:${OMPI_CI_OS_VERSION}
 
+RUN yum install -y epel-release
+
 RUN yum install -y \
     atk \
     bc \
@@ -21,8 +23,10 @@ RUN yum install -y \
     libmnl \
     libnl3 \
     make \
+    man \
     numactl-devel \
     numactl-libs \
+    pandoc \
     perl \
     perl-Data-Dumper \
     perl-Thread-Queue \
