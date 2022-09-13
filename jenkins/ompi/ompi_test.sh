@@ -218,6 +218,7 @@ function test_tune()
 {
     echo "check if mca_base_env_list parameter is supported in ${OMPI_HOME}"
     val=$("${OMPI_HOME}/bin/ompi_info" --param mca base --level 9 | grep --count mca_base_env_list || true)
+    val=0 #disable all mca_base_env_list tests until ompi schizo is fixed
 
     mca="--mca pml ucx --mca btl ^vader,tcp,openib,uct"
 
