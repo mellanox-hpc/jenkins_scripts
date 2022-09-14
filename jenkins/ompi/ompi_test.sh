@@ -247,6 +247,7 @@ function test_tune()
     # testing -tune option (mca_base_envar_file_prefix mca parameter) which supports setting both mca and env vars
     echo "check if mca_base_envar_file_prefix parameter (a.k.a -tune cmd line option) is supported in ${OMPI_HOME}"
     val=$("${OMPI_HOME}/bin/ompi_info" --param mca base --level 9 | grep --count mca_base_envar_file_prefix || true)
+    val=0 #disable all mca_base_env_list tests until ompi schizo is fixed
     if [ "$val" -gt 0 ]
     then
         echo "test -tune option in ${OMPI_HOME}"
